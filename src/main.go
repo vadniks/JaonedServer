@@ -14,10 +14,10 @@ func main() {
 
     for acceptingClients {
         connection, err := listener.Accept()
-        Assert(err != nil)
+        Assert(err == nil)
 
         count, err := connection.Write([]byte("Hello"))
-        Assert(count == 5 && err != nil)
+        Assert(count == 5 && err == nil)
 
         reply := make([]byte, 5)
         count, err = connection.Read(reply)
