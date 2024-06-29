@@ -5,7 +5,7 @@ import (
     "JaonedServer/utils"
     "fmt"
     "net"
-    "sync"
+    goSync "sync"
     "sync/atomic"
     "time"
     "unsafe"
@@ -23,7 +23,7 @@ type Network interface {
 type networkImpl struct {
     acceptingClients atomic.Bool
     receivingMessages atomic.Bool
-    waitGroup sync.WaitGroup
+    waitGroup goSync.WaitGroup
 }
 
 type message struct {
@@ -35,11 +35,11 @@ type message struct {
 
 const messageHeadSize = 12
 
-var initialized = false
+var networkInitialized = false
 
 func Init() Network {
-    utils.Assert(!initialized)
-    initialized = true
+    utils.Assert(!networkInitialized)
+    networkInitialized = true
     return &networkImpl{}
 }
 
@@ -61,11 +61,15 @@ func (impl *networkImpl) ProcessClients() {
     utils.Assert(listener.Close() == nil)
 }
 
+func (impl *networkImpl) updateConnectionIdleTimeout(connection net.Conn) {
+    utils.Assert(connection.SetDeadline(time.UnixMilli(int64(utils.CurrentTimeMillis() + 100))) == nil)
+}
+
 func (impl *networkImpl) processClient(connection net.Conn) {
     impl.waitGroup.Add(1)
-    utils.Assert(connection.SetDeadline(time.UnixMilli(int64(utils.CurrentTimeMillis() + 100))) == nil)
 
     for impl.receivingMessages.Load() {
+        impl.updateConnectionIdleTimeout(connection)
 
     }
 }

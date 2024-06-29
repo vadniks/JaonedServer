@@ -3,8 +3,8 @@ package network
 
 import (
     "JaonedServer/utils"
-"net"
-    "sync"
+    "net"
+    goSync "sync"
 )
 
 type clients interface {
@@ -14,14 +14,18 @@ type clients interface {
 
 type clientsImpl struct {
     clients map[int32]*client
-    rwMutex sync.RWMutex
+    rwMutex goSync.RWMutex
 }
 
 type client struct {
     connection net.Conn
 }
 
+var clientsInitialized = false
+
 func createClients() clients {
+    utils.Assert(!clientsInitialized)
+    clientsInitialized = true
     return &clientsImpl{}
 }
 

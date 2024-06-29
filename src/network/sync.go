@@ -1,6 +1,8 @@
 
 package network
 
+import "JaonedServer/utils"
+
 type actionFlag int32
 
 const (
@@ -10,5 +12,21 @@ const (
     flagError actionFlag = 3
     flagSuccess actionFlag = 4
 )
+
+type sync interface {
+
+}
+
+type syncImpl struct {
+
+}
+
+var syncInitialized = false
+
+func createSync() sync {
+    utils.Assert(!syncInitialized)
+    syncInitialized = true
+    return &syncImpl{}
+}
 
 
