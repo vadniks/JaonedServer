@@ -12,7 +12,7 @@ import (
 
 type Network interface {
     ProcessClients()
-    processClient(connection net.Conn, clientId int32)
+    processClient(connection net.Conn)
     receive(connection net.Conn, buffer []byte) utils.Triple
     send(connection net.Conn, buffer []byte) utils.Triple
 }
@@ -38,19 +38,18 @@ func (impl *networkImpl) ProcessClients() {
     impl.acceptingClients.Store(true)
     impl.receivingMessages.Store(true)
 
-    var clientId int32 = 0
     for impl.acceptingClients.Load() {
         connection, err := listener.Accept()
         if err != nil { continue }
 
-        go impl.processClient(connection, clientId)
+        go impl.processClient(connection)
     }
 
     impl.waitGroup.Wait()
     utils.Assert(listener.Close() == nil)
 }
 
-func (impl *networkImpl) processClient(connection net.Conn, clientId int32) {
+func (impl *networkImpl) processClient(connection net.Conn) {
     impl.waitGroup.Add(1)
     utils.Assert(connection.SetDeadline(time.UnixMilli(int64(utils.CurrentTimeMillis() + 100))) == nil)
 
