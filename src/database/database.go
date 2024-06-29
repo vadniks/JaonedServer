@@ -31,11 +31,11 @@ func Init() Database {
     utils.Assert(!initialized)
     initialized = true
 
-    db, err := sql.Open("postgres", "postgres://server:server@localhost:5432/db")
-    utils.Assert(err == nil)
+    //db, err := sql.Open("postgres", "postgres://server:server@localhost:5432/db")
+    //utils.Assert(err == nil)
 
     return &databaseImpl{
-        db,
+        //db,
     }
 }
 

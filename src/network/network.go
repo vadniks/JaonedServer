@@ -18,12 +18,14 @@ type Network interface {
     send(connection net.Conn, buffer []byte) utils.Triple
     packMessage(msg *message) []byte
     unpackMessage(bytes []byte) *message
+    shutdown()
 }
 
 type networkImpl struct {
     acceptingClients atomic.Bool
     receivingMessages atomic.Bool
     waitGroup goSync.WaitGroup
+    xSync sync
 }
 
 type message struct {
@@ -44,7 +46,10 @@ var networkInitialized = false
 func Init() Network {
     utils.Assert(!networkInitialized)
     networkInitialized = true
-    return &networkImpl{}
+
+    impl := &networkImpl{}
+    impl.xSync = createSync(impl)
+    return impl
 }
 
 func (impl *networkImpl) ProcessClients() {
@@ -73,10 +78,10 @@ func (impl *networkImpl) processClient(connection net.Conn) {
     impl.waitGroup.Add(1)
 
     for impl.receivingMessages.Load() {
-        impl.updateConnectionIdleTimeout(connection)
-
 
     }
+
+    impl.waitGroup.Done()
 }
 
 func (impl *networkImpl) receive(connection net.Conn, buffer []byte) utils.Triple {
@@ -85,6 +90,7 @@ func (impl *networkImpl) receive(connection net.Conn, buffer []byte) utils.Tripl
     count, err := connection.Read(buffer)
     if err != nil { return utils.Negative }
 
+    impl.updateConnectionIdleTimeout(connection)
     if count == len(buffer) {
         return utils.Positive
     } else {
@@ -98,6 +104,7 @@ func (impl *networkImpl) send(connection net.Conn, buffer []byte) utils.Triple {
     count, err := connection.Write(buffer)
     if err != nil { return utils.Negative }
 
+    impl.updateConnectionIdleTimeout(connection)
     if count == len(buffer) {
         return utils.Positive
     } else {
@@ -141,4 +148,9 @@ func (impl *networkImpl) unpackMessage(bytes []byte) *message {
     }
 
     return msg
+}
+
+func (impl *networkImpl) shutdown() {
+    impl.acceptingClients.Store(false)
+    impl.receivingMessages.Store(false)
 }
