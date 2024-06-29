@@ -3,6 +3,7 @@ package network
 
 import (
     "JaonedServer/utils"
+    "errors"
     "fmt"
     "net"
     goSync "sync"
@@ -15,7 +16,9 @@ type Network interface {
     ProcessClients()
     processClient(connection net.Conn)
     receive(connection net.Conn, buffer []byte) utils.Triple
+    receiveMessage(connection net.Conn) (*message, error)
     send(connection net.Conn, buffer []byte) utils.Triple
+    sendMessage(connection net.Conn, msg *message) utils.Triple
     packMessage(msg *message) []byte
     unpackMessage(bytes []byte) *message
     shutdown()
@@ -98,6 +101,21 @@ func (impl *networkImpl) receive(connection net.Conn, buffer []byte) utils.Tripl
     }
 }
 
+func (impl *networkImpl) receiveMessage(connection net.Conn) (*message, error) { // nillable
+    buffer := make([]byte, maxMessageSize)
+    result := impl.receive(connection, buffer)
+
+    if result == utils.Negative {
+        return nil, errors.New("")
+    }
+
+    if result == utils.Neutral {
+        return nil, nil
+    }
+
+    return impl.unpackMessage(buffer), nil
+}
+
 func (impl *networkImpl) send(connection net.Conn, buffer []byte) utils.Triple {
     utils.Assert(len(buffer) > 0)
 
@@ -110,6 +128,11 @@ func (impl *networkImpl) send(connection net.Conn, buffer []byte) utils.Triple {
     } else {
         return utils.Neutral
     }
+}
+
+func (impl *networkImpl) sendMessage(connection net.Conn, msg *message) utils.Triple {
+
+    return utils.Negative
 }
 
 //goland:noinspection GoRedundantConversion
