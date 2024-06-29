@@ -8,6 +8,7 @@ import (
     "sync"
     "sync/atomic"
     "time"
+    "unsafe"
 )
 
 type Network interface {
@@ -15,6 +16,8 @@ type Network interface {
     processClient(connection net.Conn)
     receive(connection net.Conn, buffer []byte) utils.Triple
     send(connection net.Conn, buffer []byte) utils.Triple
+    packMessage(msg *message) []byte
+    unpackMessage(bytes []byte) *message
 }
 
 type networkImpl struct {
@@ -22,6 +25,15 @@ type networkImpl struct {
     receivingMessages atomic.Bool
     waitGroup sync.WaitGroup
 }
+
+type message struct {
+    size int32
+    flag actionFlag
+    from int32
+    body []byte
+}
+
+const messageHeadSize = 12
 
 var initialized = false
 
@@ -82,4 +94,40 @@ func (impl *networkImpl) send(connection net.Conn, buffer []byte) utils.Triple {
     } else {
         return utils.Neutral
     }
+}
+
+//goland:noinspection GoRedundantConversion
+func (impl *networkImpl) packMessage(msg *message) []byte {
+    utils.Assert(msg.body != nil && int(msg.size) == len(msg.body) || msg.body == nil && msg.size == 0)
+
+    bytes := make([]byte, messageHeadSize + msg.size)
+
+    copy(unsafe.Slice(&(bytes[0]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(msg.size))), 4))
+    copy(unsafe.Slice(&(bytes[4]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(msg.flag))), 4))
+    copy(unsafe.Slice(&(bytes[8]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(msg.from))), 4))
+
+    if msg.body != nil { copy(unsafe.Slice(&(bytes[12]), msg.size), unsafe.Slice(&(msg.body[0]), msg.size)) }
+
+    return bytes
+}
+
+//goland:noinspection GoRedundantConversion
+func (impl *networkImpl) unpackMessage(bytes []byte) *message {
+    size := int32(len(bytes))
+    utils.Assert(size >= messageHeadSize)
+
+    msg := new(message)
+
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(msg.size))), 4), unsafe.Slice(&(bytes[0]), 4))
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(msg.flag))), 4), unsafe.Slice(&(bytes[4]), 4))
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(msg.from))), 4), unsafe.Slice(&(bytes[8]), 4))
+
+    if msg.size > 0 {
+        msg.body = make([]byte, msg.size)
+        copy(unsafe.Slice(&(msg.body[0]), msg.size), unsafe.Slice(&(bytes[12]), msg.size))
+    } else {
+        msg.body = nil
+    }
+
+    return msg
 }
