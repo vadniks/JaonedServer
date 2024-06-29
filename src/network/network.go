@@ -33,7 +33,11 @@ type message struct {
     body []byte
 }
 
-const messageHeadSize = 12
+const (
+	messageHeadSize = 4 + 4 + 4 // 12
+    maxMessageBodySize = 128 - messageHeadSize // 116
+    maxMessageSize = 12 + maxMessageBodySize // 128
+)
 
 var networkInitialized = false
 
@@ -70,6 +74,7 @@ func (impl *networkImpl) processClient(connection net.Conn) {
 
     for impl.receivingMessages.Load() {
         impl.updateConnectionIdleTimeout(connection)
+
 
     }
 }
@@ -118,13 +123,15 @@ func (impl *networkImpl) packMessage(msg *message) []byte {
 //goland:noinspection GoRedundantConversion
 func (impl *networkImpl) unpackMessage(bytes []byte) *message {
     size := int32(len(bytes))
-    utils.Assert(size >= messageHeadSize)
+    utils.Assert(size >= messageHeadSize && size <= maxMessageSize)
 
     msg := new(message)
 
     copy(unsafe.Slice((*byte) (unsafe.Pointer(&(msg.size))), 4), unsafe.Slice(&(bytes[0]), 4))
     copy(unsafe.Slice((*byte) (unsafe.Pointer(&(msg.flag))), 4), unsafe.Slice(&(bytes[4]), 4))
     copy(unsafe.Slice((*byte) (unsafe.Pointer(&(msg.from))), 4), unsafe.Slice(&(bytes[8]), 4))
+
+    utils.Assert(msg.size <= maxMessageBodySize)
 
     if msg.size > 0 {
         msg.body = make([]byte, msg.size)

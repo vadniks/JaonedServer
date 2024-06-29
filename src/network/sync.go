@@ -1,7 +1,10 @@
 
 package network
 
-import "JaonedServer/utils"
+import (
+    "JaonedServer/utils"
+    "net"
+)
 
 type actionFlag int32
 
@@ -14,7 +17,7 @@ const (
 )
 
 type sync interface {
-
+    routeMessage(connection net.Conn, msg *message) bool
 }
 
 type syncImpl struct {
@@ -29,4 +32,6 @@ func createSync() sync {
     return &syncImpl{}
 }
 
-
+func (impl *syncImpl) routeMessage(connection net.Conn, msg *message) bool {
+    return false
+}
