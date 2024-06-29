@@ -19,6 +19,7 @@ type Network interface {
 
 type networkImpl struct {
     acceptingClients atomic.Bool
+    receivingMessages atomic.Bool
     waitGroup sync.WaitGroup
 }
 
@@ -35,6 +36,7 @@ func (impl *networkImpl) ProcessClients() {
     utils.Assert(err == nil)
 
     impl.acceptingClients.Store(true)
+    impl.receivingMessages.Store(true)
 
     var clientId int32 = 0
     for impl.acceptingClients.Load() {
@@ -52,7 +54,9 @@ func (impl *networkImpl) processClient(connection net.Conn, clientId int32) {
     impl.waitGroup.Add(1)
     utils.Assert(connection.SetDeadline(time.UnixMilli(int64(utils.CurrentTimeMillis() + 100))) == nil)
 
+    for impl.receivingMessages.Load() {
 
+    }
 }
 
 func (impl *networkImpl) receive(connection net.Conn, buffer []byte) utils.Triple {
