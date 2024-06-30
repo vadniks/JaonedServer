@@ -81,7 +81,6 @@ func (impl *networkImpl) processClient(connection net.Conn) {
 
     for impl.receivingMessages.Load() {
         msg, err := impl.receiveMessage(connection)
-        println("receive loop")
 
         if err != nil { break }
         if msg == nil { continue }
@@ -89,7 +88,6 @@ func (impl *networkImpl) processClient(connection net.Conn) {
         if impl.xSync.routeMessage(connection, msg) { break }
     }
 
-    println("done")
     impl.waitGroup.Done()
 }
 
