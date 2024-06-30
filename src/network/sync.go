@@ -4,7 +4,8 @@ package network
 import (
     "JaonedServer/database"
     "JaonedServer/utils"
-    "net"
+    "fmt"
+"net"
     "reflect"
     "unsafe"
 )
@@ -53,6 +54,8 @@ func (impl *syncImpl) logIn(connection net.Conn, msg *message) bool {
     username := msg.body[0:maxUsernameSize]
     password := msg.body[maxUsernameSize:(maxUsernameSize + maxPasswordSize)]
 
+    fmt.Printf("%v | %v\n", username, password)
+
     user := impl.db.FindUser(username)
     authenticated := reflect.DeepEqual(password, user.Password)
 
@@ -65,7 +68,7 @@ func (impl *syncImpl) logIn(connection net.Conn, msg *message) bool {
 
     println("logIn")
     impl.network.send(connection, impl.network.packMessage(&message{
-        0,
+        int32(len(body)),
         flagLogIn,
         fromServer,
         body,

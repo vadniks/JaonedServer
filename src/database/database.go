@@ -43,7 +43,7 @@ func Init() Database {
         []byte{'a', 'd', 'm', 'i', 'n', 0, 0, 0},
         []byte{'p', 'a', 's', 's', 0, 0, 0, 0},
     }
-    users[0] = &User{
+    users[1] = &User{
         1,
         []byte{'u', 's', 'e', 'r', 0, 0, 0, 0},
         []byte{'p', 'a', 's', 's', 0, 0, 0, 0},
