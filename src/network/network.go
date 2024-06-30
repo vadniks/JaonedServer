@@ -81,7 +81,12 @@ func (impl *networkImpl) processClient(connection net.Conn) {
     impl.waitGroup.Add(1)
 
     for impl.receivingMessages.Load() {
+        msg, err := impl.receiveMessage(connection)
 
+        if err != nil { break }
+        if msg == nil { continue }
+
+        impl.xSync.routeMessage(connection, msg)
     }
 
     impl.waitGroup.Done()
