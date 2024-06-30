@@ -131,8 +131,7 @@ func (impl *networkImpl) send(connection net.Conn, buffer []byte) utils.Triple {
 }
 
 func (impl *networkImpl) sendMessage(connection net.Conn, msg *message) utils.Triple {
-
-    return utils.Negative
+    return impl.send(connection, impl.packMessage(msg))
 }
 
 //goland:noinspection GoRedundantConversion

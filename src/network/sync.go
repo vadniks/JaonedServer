@@ -53,27 +53,21 @@ func (impl *syncImpl) logIn(connection net.Conn, msg *message) bool {
     username := msg.body[0:maxUsernameSize]
     password := msg.body[maxUsernameSize:(maxUsernameSize + maxPasswordSize)]
 
-    isAdmin := reflect.DeepEqual(username, []byte{0, 0, 0, 0, 0, 0, 0, 0}) && reflect.DeepEqual(password, []byte{1, 1, 1, 1, 1, 1, 1, 1}) // TODO: test only
-    isSomeone := reflect.DeepEqual(username, []byte{2, 2, 2, 2, 2, 2, 2, 2}) && reflect.DeepEqual(password, []byte{3, 3, 3, 3, 3, 3, 3, 3}) // TODO: test only
+    user := impl.db.FindUser(username)
+    authenticated := reflect.DeepEqual(password, user.Password)
 
-    authenticated := isAdmin || isSomeone
+    var body []byte
+    if !authenticated {
+        body = nil
+    } else {
+        body = unsafe.Slice((*byte) (unsafe.Pointer(&(user.Id))), 4)
+    }
 
     impl.network.send(connection, impl.network.packMessage(&message{
         0,
         flagLogIn,
         fromServer,
-        func() []byte {
-            if !authenticated { return nil }
-
-            var id int32
-            if isAdmin {
-                id = 0
-            } else {
-                id = 1
-            }
-
-            return unsafe.Slice((*byte) (unsafe.Pointer(&(id))), 4)
-        }(),
+        body,
     }))
 
     return authenticated
