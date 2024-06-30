@@ -70,7 +70,7 @@ func (impl *syncImpl) logIn(connection net.Conn, msg *message) bool {
         body,
     }))
 
-    return true
+    return false
 }
 
 func (impl *syncImpl) routeMessage(connection net.Conn, msg *message) bool {
