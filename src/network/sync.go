@@ -63,6 +63,7 @@ func (impl *syncImpl) logIn(connection net.Conn, msg *message) bool {
         body = unsafe.Slice((*byte) (unsafe.Pointer(&(user.Id))), 4)
     }
 
+    println("logIn")
     impl.network.send(connection, impl.network.packMessage(&message{
         0,
         flagLogIn,
@@ -70,10 +71,11 @@ func (impl *syncImpl) logIn(connection net.Conn, msg *message) bool {
         body,
     }))
 
-    return false
+    return !authenticated
 }
 
 func (impl *syncImpl) routeMessage(connection net.Conn, msg *message) bool {
+    println("routeMessage")
     switch msg.flag {
         case flagLogIn:
             return impl.logIn(connection, msg)

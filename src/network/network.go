@@ -20,7 +20,6 @@ type Network interface {
     send(connection net.Conn, buffer []byte) utils.Triple
     sendMessage(connection net.Conn, msg *message) utils.Triple
     packMessage(msg *message) []byte
-    unpackMessage(bytes []byte) *message
     shutdown()
 }
 
@@ -74,7 +73,7 @@ func (impl *networkImpl) ProcessClients() {
 }
 
 func (impl *networkImpl) updateConnectionIdleTimeout(connection net.Conn) {
-    utils.Assert(connection.SetDeadline(time.UnixMilli(int64(utils.CurrentTimeMillis() + 100))) == nil)
+    utils.Assert(connection.SetDeadline(time.UnixMilli(int64(utils.CurrentTimeMillis() + 15 * 60 * 1000))) == nil)
 }
 
 func (impl *networkImpl) processClient(connection net.Conn) {
@@ -82,13 +81,15 @@ func (impl *networkImpl) processClient(connection net.Conn) {
 
     for impl.receivingMessages.Load() {
         msg, err := impl.receiveMessage(connection)
+        println("receive loop")
 
         if err != nil { break }
         if msg == nil { continue }
 
-        impl.xSync.routeMessage(connection, msg)
+        if impl.xSync.routeMessage(connection, msg) { break }
     }
 
+    println("done")
     impl.waitGroup.Done()
 }
 
@@ -107,18 +108,33 @@ func (impl *networkImpl) receive(connection net.Conn, buffer []byte) utils.Tripl
 }
 
 func (impl *networkImpl) receiveMessage(connection net.Conn) (*message, error) { // nillable
-    buffer := make([]byte, maxMessageSize)
-    result := impl.receive(connection, buffer)
+    head := make([]byte, messageHeadSize)
+    result := impl.receive(connection, head)
 
-    if result == utils.Negative {
-        return nil, errors.New("")
+    if result == utils.Negative { return nil, errors.New("") }
+    if result == utils.Neutral { return nil, nil }
+
+    msg := new(message)
+
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(msg.size))), 4), unsafe.Slice(&(head[0]), 4))
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(msg.flag))), 4), unsafe.Slice(&(head[4]), 4))
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(msg.from))), 4), unsafe.Slice(&(head[8]), 4))
+
+    utils.Assert(msg.size <= maxMessageBodySize)
+
+    if msg.size > 0 {
+        body := make([]byte, msg.size)
+        result := impl.receive(connection, body)
+
+        if result == utils.Negative { return nil, errors.New("") }
+        if result == utils.Neutral { return nil, nil }
+
+        msg.body = body
+    } else {
+        msg.body = nil
     }
 
-    if result == utils.Neutral {
-        return nil, nil
-    }
-
-    return impl.unpackMessage(buffer), nil
+    return msg, nil
 }
 
 func (impl *networkImpl) send(connection net.Conn, buffer []byte) utils.Triple {
@@ -152,29 +168,6 @@ func (impl *networkImpl) packMessage(msg *message) []byte {
     if msg.body != nil { copy(unsafe.Slice(&(bytes[12]), msg.size), unsafe.Slice(&(msg.body[0]), msg.size)) }
 
     return bytes
-}
-
-//goland:noinspection GoRedundantConversion
-func (impl *networkImpl) unpackMessage(bytes []byte) *message {
-    size := int32(len(bytes))
-    utils.Assert(size >= messageHeadSize && size <= maxMessageSize)
-
-    msg := new(message)
-
-    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(msg.size))), 4), unsafe.Slice(&(bytes[0]), 4))
-    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(msg.flag))), 4), unsafe.Slice(&(bytes[4]), 4))
-    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(msg.from))), 4), unsafe.Slice(&(bytes[8]), 4))
-
-    utils.Assert(msg.size <= maxMessageBodySize)
-
-    if msg.size > 0 {
-        msg.body = make([]byte, msg.size)
-        copy(msg.body, unsafe.Slice(&(bytes[12]), msg.size))
-    } else {
-        msg.body = nil
-    }
-
-    return msg
 }
 
 func (impl *networkImpl) shutdown() {
