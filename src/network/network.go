@@ -164,7 +164,7 @@ func (impl *networkImpl) unpackMessage(bytes []byte) *message {
 
     if msg.size > 0 {
         msg.body = make([]byte, msg.size)
-        copy(unsafe.Slice(&(msg.body[0]), msg.size), unsafe.Slice(&(bytes[12]), msg.size))
+        copy(msg.body, unsafe.Slice(&(bytes[12]), msg.size))
     } else {
         msg.body = nil
     }
