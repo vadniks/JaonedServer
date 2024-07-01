@@ -73,7 +73,7 @@ func (impl *networkImpl) ProcessClients() {
 }
 
 func (impl *networkImpl) updateConnectionIdleTimeout(connection net.Conn) {
-    utils.Assert(connection.SetDeadline(time.UnixMilli(int64(utils.CurrentTimeMillis() + 15 * 60 * 1000))) == nil)
+    utils.Assert(connection.SetDeadline(time.UnixMilli(int64(utils.CurrentTimeMillis() + 15 * 60 * 1000))) == nil) // 15 minutes
 }
 
 func (impl *networkImpl) processClient(connection net.Conn) {
