@@ -54,7 +54,13 @@ func (impl *syncImpl) logIn(connection net.Conn, msg *message) bool {
     password := msg.body[maxUsernameSize:(maxUsernameSize + maxPasswordSize)]
 
     user := impl.db.FindUser(username)
-    authenticated := reflect.DeepEqual(password, user.Password)
+    var authenticated bool
+
+    if user != nil {
+        authenticated = reflect.DeepEqual(password, user.Password)
+    } else {
+        authenticated = false
+    }
 
     var body []byte
     if !authenticated {

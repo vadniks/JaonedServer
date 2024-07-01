@@ -88,6 +88,7 @@ func (impl *networkImpl) processClient(connection net.Conn) {
         if impl.xSync.routeMessage(connection, msg) { break }
     }
 
+    utils.Assert(connection.Close() == nil)
     impl.waitGroup.Done()
 }
 
