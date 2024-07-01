@@ -25,6 +25,7 @@ const (
 type Sync interface {
     logIn(connection net.Conn, message *Message) bool
     register(connection net.Conn, message *Message) bool
+    shutdown(connection net.Conn) bool
     routeMessage(connection net.Conn, message *Message) bool
     clientDisconnected(connection net.Conn)
 }
@@ -50,6 +51,15 @@ func createSync(network Network) Sync {
 
 func (impl *SyncImpl) logIn(connection net.Conn, message *Message) bool {
     utils.Assert(message.body != nil && message.size == maxUsernameSize + maxPasswordSize)
+
+    if impl.clients.getClient(connection) != nil {
+        impl.network.sendMessage(connection, &Message{
+            0,
+            flagLogIn,
+            nil,
+        })
+        return true
+    }
 
     username := message.body[0:maxUsernameSize]
     password := message.body[maxUsernameSize:(maxUsernameSize + maxPasswordSize)]
@@ -83,6 +93,15 @@ func (impl *SyncImpl) logIn(connection net.Conn, message *Message) bool {
 func (impl *SyncImpl) register(connection net.Conn, message *Message) bool {
     utils.Assert(message.body != nil && message.size == maxUsernameSize + maxPasswordSize)
 
+    if impl.clients.getClient(connection) != nil {
+        impl.network.sendMessage(connection, &Message{
+            0,
+            flagRegister,
+            nil,
+        })
+        return true
+    }
+
     username := message.body[0:maxUsernameSize]
     password := message.body[maxUsernameSize:(maxUsernameSize + maxPasswordSize)]
 
@@ -104,6 +123,19 @@ func (impl *SyncImpl) register(connection net.Conn, message *Message) bool {
     return true
 }
 
+func (impl *SyncImpl) shutdown(connection net.Conn) bool {
+    if client := impl.clients.getClient(connection); client != nil && client.IsAdmin {
+        impl.network.shutdown()
+    } else {
+        impl.network.sendMessage(connection, &Message{
+            0,
+            flagError,
+            nil,
+        })
+    }
+    return true
+}
+
 func (impl *SyncImpl) routeMessage(connection net.Conn, message *Message) bool {
     disconnect := false
 
@@ -113,10 +145,7 @@ func (impl *SyncImpl) routeMessage(connection net.Conn, message *Message) bool {
         case flagRegister:
             disconnect = impl.register(connection, message)
         case flagShutdown:
-            if client := impl.clients.getClient(connection); client != nil && client.IsAdmin {
-                 impl.network.shutdown()
-                 disconnect = true
-            }
+            disconnect = impl.shutdown(connection)
     }
 
     if disconnect {
