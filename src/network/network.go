@@ -33,14 +33,13 @@ type networkImpl struct {
 type message struct {
     size int32
     flag actionFlag
-    from int32
     body []byte
 }
 
 const (
-	messageHeadSize = 4 + 4 + 4 // 12
-    maxMessageBodySize = 128 - messageHeadSize // 116
-    maxMessageSize = 12 + maxMessageBodySize // 128
+	messageHeadSize = 4 + 4 // 8
+    maxMessageBodySize = 128 - messageHeadSize // 120
+    maxMessageSize = messageHeadSize + maxMessageBodySize // 128
 )
 
 var networkInitialized = false
@@ -118,7 +117,6 @@ func (impl *networkImpl) receiveMessage(connection net.Conn) (*message, error) {
 
     copy(unsafe.Slice((*byte) (unsafe.Pointer(&(msg.size))), 4), unsafe.Slice(&(head[0]), 4))
     copy(unsafe.Slice((*byte) (unsafe.Pointer(&(msg.flag))), 4), unsafe.Slice(&(head[4]), 4))
-    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(msg.from))), 4), unsafe.Slice(&(head[8]), 4))
 
     utils.Assert(msg.size <= maxMessageBodySize)
 
@@ -162,9 +160,8 @@ func (impl *networkImpl) packMessage(msg *message) []byte {
 
     copy(unsafe.Slice(&(bytes[0]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(msg.size))), 4))
     copy(unsafe.Slice(&(bytes[4]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(msg.flag))), 4))
-    copy(unsafe.Slice(&(bytes[8]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(msg.from))), 4))
 
-    if msg.body != nil { copy(unsafe.Slice(&(bytes[12]), msg.size), unsafe.Slice(&(msg.body[0]), msg.size)) }
+    if msg.body != nil { copy(unsafe.Slice(&(bytes[8]), msg.size), unsafe.Slice(&(msg.body[0]), msg.size)) }
 
     return bytes
 }

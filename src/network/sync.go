@@ -6,8 +6,7 @@ import (
     "JaonedServer/utils"
     "net"
     "reflect"
-    "unsafe"
-)
+    )
 
 type actionFlag int32
 
@@ -21,9 +20,6 @@ const (
 
     maxUsernameSize = 8
     maxPasswordSize = 8
-
-    fromServer = -1
-    fromAnonymous = -2
 )
 
 type sync interface {
@@ -71,14 +67,13 @@ func (impl *syncImpl) logIn(connection net.Conn, msg *message) bool {
     if !authenticated {
         body = nil
     } else {
-        body = unsafe.Slice((*byte) (unsafe.Pointer(&(user.Id))), 4)
+        body = make([]byte, 1)
         impl.xClients.addClient(connection, user.Id)
     }
 
     impl.network.sendMessage(connection, &message{
         int32(len(body)),
         flagLogIn,
-        fromServer,
         body,
     })
 
@@ -103,7 +98,6 @@ func (impl *syncImpl) register(connection net.Conn, msg *message) bool {
     impl.network.sendMessage(connection, &message{
         int32(len(body)),
         flagRegister,
-        fromServer,
         body,
     })
 
@@ -118,9 +112,9 @@ func (impl *syncImpl) routeMessage(connection net.Conn, msg *message) bool {
             disconnect = impl.logIn(connection, msg)
         case flagRegister:
             disconnect = impl.register(connection, msg)
-        case flagShutdown:
-            if msg.from == 0 { impl.network.shutdown() }
-            disconnect = true
+        //case flagShutdown:
+        //    if msg.from == 0 { impl.network.shutdown() }
+        //    disconnect = true
     }
 
     if disconnect {
