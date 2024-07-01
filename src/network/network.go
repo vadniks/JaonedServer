@@ -24,6 +24,7 @@ type Network interface {
 }
 
 type NetworkImpl struct {
+    listener net.Listener
     acceptingClients atomic.Bool
     receivingMessages atomic.Bool
     waitGroup sync.WaitGroup
@@ -56,6 +57,7 @@ func Init() Network {
 func (impl *NetworkImpl) ProcessClients() {
     listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", "127.0.0.1", 8080))
     utils.Assert(err == nil)
+    impl.listener = listener
 
     impl.acceptingClients.Store(true)
     impl.receivingMessages.Store(true)
@@ -68,7 +70,9 @@ func (impl *NetworkImpl) ProcessClients() {
     }
 
     impl.waitGroup.Wait()
-    utils.Assert(listener.Close() == nil)
+
+    err = listener.Close()
+    utils.Assert(err == nil || errors.Is(err, net.ErrClosed))
 }
 
 func (impl *NetworkImpl) updateConnectionIdleTimeout(connection net.Conn) {
@@ -169,4 +173,5 @@ func (impl *NetworkImpl) packMessage(message *Message) []byte {
 func (impl *NetworkImpl) shutdown() {
     impl.acceptingClients.Store(false)
     impl.receivingMessages.Store(false)
+    utils.Assert(impl.listener.Close() == nil)
 }
