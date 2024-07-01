@@ -5,52 +5,52 @@ import (
     "JaonedServer/database"
     "JaonedServer/utils"
     "net"
-    goSync "sync"
+    "sync"
 )
 
-type clients interface {
-    addClient(connection net.Conn, xClient *client)
-    getClient(connection net.Conn) *client // nillable
+type Clients interface {
+    addClient(connection net.Conn, client *Client)
+    getClient(connection net.Conn) *Client // nillable
     removeClient(connection net.Conn) bool
 }
 
-type clientsImpl struct {
-    clients map[net.Conn]*client
-    rwMutex goSync.RWMutex
+type ClientsImpl struct {
+    clients map[net.Conn]*Client
+    rwMutex sync.RWMutex
 }
 
-type client struct {
+type Client struct {
     *database.User
 }
 
 var clientsInitialized = false
 
-func createClients() clients {
+func createClients() Clients {
     utils.Assert(!clientsInitialized)
     clientsInitialized = true
 
-    return &clientsImpl{
-        make(map[net.Conn]*client),
-        goSync.RWMutex{},
+    return &ClientsImpl{
+        make(map[net.Conn]*Client),
+        sync.RWMutex{},
     }
 }
 
-func (impl *clientsImpl) addClient(connection net.Conn, xClient *client) {
+func (impl *ClientsImpl) addClient(connection net.Conn, client *Client) {
     impl.rwMutex.Lock()
 
     _, found := impl.clients[connection]
     utils.Assert(!found)
 
-    impl.clients[connection] = xClient
+    impl.clients[connection] = client
 
     impl.rwMutex.Unlock()
 }
 
-func (impl *clientsImpl) getClient(connection net.Conn) *client { // nillable
+func (impl *ClientsImpl) getClient(connection net.Conn) *Client { // nillable
     return impl.clients[connection]
 }
 
-func (impl *clientsImpl) removeClient(connection net.Conn) bool {
+func (impl *ClientsImpl) removeClient(connection net.Conn) bool {
     impl.rwMutex.Lock()
 
     _, found := impl.clients[connection]

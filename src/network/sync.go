@@ -6,7 +6,7 @@ import (
     "JaonedServer/utils"
     "net"
     "reflect"
-    )
+)
 
 type actionFlag int32
 
@@ -22,37 +22,37 @@ const (
     maxPasswordSize = 8
 )
 
-type sync interface {
-    logIn(connection net.Conn, msg *message) bool
-    register(connection net.Conn, msg *message) bool
-    routeMessage(connection net.Conn, msg *message) bool
+type Sync interface {
+    logIn(connection net.Conn, message *Message) bool
+    register(connection net.Conn, message *Message) bool
+    routeMessage(connection net.Conn, message *Message) bool
     clientDisconnected(connection net.Conn)
 }
 
-type syncImpl struct {
+type SyncImpl struct {
     db database.Database
     network Network
-    xClients clients
+    clients Clients
 }
 
 var syncInitialized = false
 
-func createSync(network Network) sync {
+func createSync(network Network) Sync {
     utils.Assert(!syncInitialized)
     syncInitialized = true
 
-    return &syncImpl{
+    return &SyncImpl{
         database.Init(),
         network,
         createClients(),
     }
 }
 
-func (impl *syncImpl) logIn(connection net.Conn, msg *message) bool {
-    utils.Assert(msg.body != nil && msg.size == maxUsernameSize + maxPasswordSize)
+func (impl *SyncImpl) logIn(connection net.Conn, message *Message) bool {
+    utils.Assert(message.body != nil && message.size == maxUsernameSize + maxPasswordSize)
 
-    username := msg.body[0:maxUsernameSize]
-    password := msg.body[maxUsernameSize:(maxUsernameSize + maxPasswordSize)]
+    username := message.body[0:maxUsernameSize]
+    password := message.body[maxUsernameSize:(maxUsernameSize + maxPasswordSize)]
 
     user := impl.db.FindUser(username)
     var authenticated bool
@@ -68,10 +68,10 @@ func (impl *syncImpl) logIn(connection net.Conn, msg *message) bool {
         body = nil
     } else {
         body = make([]byte, 1)
-        impl.xClients.addClient(connection, &client{user})
+        impl.clients.addClient(connection, &Client{user})
     }
 
-    impl.network.sendMessage(connection, &message{
+    impl.network.sendMessage(connection, &Message{
         int32(len(body)),
         flagLogIn,
         body,
@@ -80,11 +80,11 @@ func (impl *syncImpl) logIn(connection net.Conn, msg *message) bool {
     return !authenticated
 }
 
-func (impl *syncImpl) register(connection net.Conn, msg *message) bool {
-    utils.Assert(msg.body != nil && msg.size == maxUsernameSize + maxPasswordSize)
+func (impl *SyncImpl) register(connection net.Conn, message *Message) bool {
+    utils.Assert(message.body != nil && message.size == maxUsernameSize + maxPasswordSize)
 
-    username := msg.body[0:maxUsernameSize]
-    password := msg.body[maxUsernameSize:(maxUsernameSize + maxPasswordSize)]
+    username := message.body[0:maxUsernameSize]
+    password := message.body[maxUsernameSize:(maxUsernameSize + maxPasswordSize)]
 
     successful := impl.db.AddUser(username, password)
 
@@ -95,7 +95,7 @@ func (impl *syncImpl) register(connection net.Conn, msg *message) bool {
         body = make([]byte, 1)
     }
 
-    impl.network.sendMessage(connection, &message{
+    impl.network.sendMessage(connection, &Message{
         int32(len(body)),
         flagRegister,
         body,
@@ -104,26 +104,23 @@ func (impl *syncImpl) register(connection net.Conn, msg *message) bool {
     return true
 }
 
-func (impl *syncImpl) routeMessage(connection net.Conn, msg *message) bool {
+func (impl *SyncImpl) routeMessage(connection net.Conn, message *Message) bool {
     disconnect := false
 
-    switch msg.flag {
+    switch message.flag {
         case flagLogIn:
-            disconnect = impl.logIn(connection, msg)
+            disconnect = impl.logIn(connection, message)
         case flagRegister:
-            disconnect = impl.register(connection, msg)
-        //case flagShutdown:
-        //    if msg.from == 0 { impl.network.shutdown() }
-        //    disconnect = true
+            disconnect = impl.register(connection, message)
     }
 
     if disconnect {
-        impl.xClients.removeClient(connection)
+        impl.clients.removeClient(connection)
     }
 
     return disconnect
 }
 
-func (impl *syncImpl) clientDisconnected(connection net.Conn) {
-    impl.xClients.removeClient(connection)
+func (impl *SyncImpl) clientDisconnected(connection net.Conn) {
+    impl.clients.removeClient(connection)
 }

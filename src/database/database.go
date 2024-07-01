@@ -22,7 +22,7 @@ type Database interface {
     UserExists(username []byte) bool
 }
 
-type databaseImpl struct {
+type DatabaseImpl struct {
     db *sql.DB
     users []*User // TODO: test only
 }
@@ -46,17 +46,17 @@ func Init() Database {
         []byte{'p', 'a', 's', 's', 0, 0, 0, 0},
     }
 
-    return &databaseImpl{
+    return &DatabaseImpl{
         nil,
         users,
     }
 }
 
-func (impl *databaseImpl) Close() {
+func (impl *DatabaseImpl) Close() {
 
 }
 
-func (impl *databaseImpl) FindUser(username []byte) *User { // TODO: stub
+func (impl *DatabaseImpl) FindUser(username []byte) *User { // TODO: stub
     for _, user := range impl.users {
         if reflect.DeepEqual(username, user.Username) {
             return user
@@ -65,7 +65,7 @@ func (impl *databaseImpl) FindUser(username []byte) *User { // TODO: stub
     return nil
 }
 
-func (impl *databaseImpl) AddUser(username []byte, password []byte) bool { // TODO: stub
+func (impl *DatabaseImpl) AddUser(username []byte, password []byte) bool { // TODO: stub
     if impl.UserExists(username) { return false }
 
     found := false
@@ -84,14 +84,14 @@ func (impl *databaseImpl) AddUser(username []byte, password []byte) bool { // TO
     return true
 }
 
-func (impl *databaseImpl) RemoveUser(username []byte) bool {
+func (impl *DatabaseImpl) RemoveUser(username []byte) bool {
     return false
 }
 
-func (impl *databaseImpl) GetAllUsers() []*User {
+func (impl *DatabaseImpl) GetAllUsers() []*User {
     return nil
 }
 
-func (impl *databaseImpl) UserExists(username []byte) bool { // TODO: stub
+func (impl *DatabaseImpl) UserExists(username []byte) bool { // TODO: stub
     return impl.FindUser(username) != nil
 }
