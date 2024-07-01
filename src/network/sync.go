@@ -23,6 +23,7 @@ const (
     maxPasswordSize = 8
 
     fromServer = -1
+    fromAnonymous = -2
 )
 
 type sync interface {
