@@ -17,8 +17,8 @@ type User struct {
 type Database interface {
     Close()
     FindUser(username []byte) *User // nillable
-    AddUser(username []byte, password []byte)
-    RemoveUser(username []byte)
+    AddUser(username []byte, password []byte) bool
+    RemoveUser(username []byte) bool
     GetAllUsers() []*User
     UserExists(username []byte) bool
 }
@@ -59,7 +59,7 @@ func (impl *databaseImpl) Close() {
 
 }
 
-func (impl *databaseImpl) FindUser(username []byte) *User {
+func (impl *databaseImpl) FindUser(username []byte) *User { // TODO: stub
     for _, user := range impl.users {
         if reflect.DeepEqual(username, user.Username) {
             return user
@@ -68,18 +68,36 @@ func (impl *databaseImpl) FindUser(username []byte) *User {
     return nil
 }
 
-func (impl *databaseImpl) AddUser(username []byte, password []byte) {
+func (impl *databaseImpl) AddUser(username []byte, password []byte) bool { // TODO: stub
+    if impl.UserExists(username) { return false }
 
+    found := false
+    id := int32(0)
+
+    for _, user := range impl.users {
+        if reflect.DeepEqual(user.Username, username) { found = true }
+        if user.Id > id { id = user.Id }
+    }
+
+    if found { return false }
+
+    impl.users = append(impl.users, &User{
+        id + 1,
+        username,
+        password,
+    })
+
+    return true
 }
 
-func (impl *databaseImpl) RemoveUser(username []byte) {
-
+func (impl *databaseImpl) RemoveUser(username []byte) bool {
+    return false
 }
 
 func (impl *databaseImpl) GetAllUsers() []*User {
     return nil
 }
 
-func (impl *databaseImpl) UserExists(username []byte) bool {
-    return false
+func (impl *databaseImpl) UserExists(username []byte) bool { // TODO: stub
+    return impl.FindUser(username) != nil
 }

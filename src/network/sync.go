@@ -27,6 +27,7 @@ const (
 
 type sync interface {
     logIn(connection net.Conn, msg *message) bool
+    register(connection net.Conn, msg *message) bool
     routeMessage(connection net.Conn, msg *message) bool
     clientDisconnected(connection net.Conn)
 }
@@ -73,14 +74,39 @@ func (impl *syncImpl) logIn(connection net.Conn, msg *message) bool {
         impl.xClients.addClient(connection, user.Id)
     }
 
-    impl.network.send(connection, impl.network.packMessage(&message{
+    impl.network.sendMessage(connection, &message{
         int32(len(body)),
         flagLogIn,
         fromServer,
         body,
-    }))
+    })
 
     return !authenticated
+}
+
+func (impl *syncImpl) register(connection net.Conn, msg *message) bool {
+    utils.Assert(msg.body != nil && msg.size == maxUsernameSize + maxPasswordSize)
+
+    username := msg.body[0:maxUsernameSize]
+    password := msg.body[maxUsernameSize:(maxUsernameSize + maxPasswordSize)]
+
+    successful := impl.db.AddUser(username, password)
+
+    var body []byte
+    if !successful {
+        body = nil
+    } else {
+        body = make([]byte, 1)
+    }
+
+    impl.network.sendMessage(connection, &message{
+        int32(len(body)),
+        flagRegister,
+        fromServer,
+        body,
+    })
+
+    return true
 }
 
 func (impl *syncImpl) routeMessage(connection net.Conn, msg *message) bool {
