@@ -11,6 +11,7 @@ import (
 type User struct {
     Username []byte
     Password []byte
+    IsAdmin bool
 }
 
 type Database interface {
@@ -40,10 +41,12 @@ func Init() Database {
     users[0] = &User{
         []byte{'a', 'd', 'm', 'i', 'n', 0, 0, 0},
         []byte{'p', 'a', 's', 's', 0, 0, 0, 0},
+        true,
     }
     users[1] = &User{
         []byte{'u', 's', 'e', 'r', 0, 0, 0, 0},
         []byte{'p', 'a', 's', 's', 0, 0, 0, 0},
+        false,
     }
 
     return &DatabaseImpl{
@@ -79,6 +82,7 @@ func (impl *DatabaseImpl) AddUser(username []byte, password []byte) bool { // TO
     impl.users = append(impl.users, &User{
         username,
         password,
+        false,
     })
 
     return true

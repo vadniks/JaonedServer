@@ -112,6 +112,11 @@ func (impl *SyncImpl) routeMessage(connection net.Conn, message *Message) bool {
             disconnect = impl.logIn(connection, message)
         case flagRegister:
             disconnect = impl.register(connection, message)
+        case flagShutdown:
+            if client := impl.clients.getClient(connection); client != nil && client.IsAdmin {
+                 impl.network.shutdown()
+                 disconnect = true
+            }
     }
 
     if disconnect {
