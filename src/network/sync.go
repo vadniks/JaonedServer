@@ -28,11 +28,13 @@ const (
 type sync interface {
     logIn(connection net.Conn, msg *message) bool
     routeMessage(connection net.Conn, msg *message) bool
+    clientDisconnected(connection net.Conn)
 }
 
 type syncImpl struct {
     db database.Database
     network Network
+    xClients clients
 }
 
 var syncInitialized = false
@@ -44,6 +46,7 @@ func createSync(network Network) sync {
     return &syncImpl{
         database.Init(),
         network,
+        createClients(),
     }
 }
 
@@ -67,6 +70,7 @@ func (impl *syncImpl) logIn(connection net.Conn, msg *message) bool {
         body = nil
     } else {
         body = unsafe.Slice((*byte) (unsafe.Pointer(&(user.Id))), 4)
+        impl.xClients.addClient(connection, user.Id)
     }
 
     impl.network.send(connection, impl.network.packMessage(&message{
@@ -80,13 +84,23 @@ func (impl *syncImpl) logIn(connection net.Conn, msg *message) bool {
 }
 
 func (impl *syncImpl) routeMessage(connection net.Conn, msg *message) bool {
+    disconnect := false
+
     switch msg.flag {
         case flagLogIn:
-            return impl.logIn(connection, msg)
+            disconnect = impl.logIn(connection, msg)
         case flagShutdown:
             if msg.from == 0 { impl.network.shutdown() }
-            return true
+            disconnect = true
     }
 
-    return false
+    if disconnect {
+        impl.xClients.removeClient2(connection)
+    }
+
+    return disconnect
+}
+
+func (impl *syncImpl) clientDisconnected(connection net.Conn) {
+    impl.xClients.removeClient2(connection)
 }
