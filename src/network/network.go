@@ -155,7 +155,6 @@ func (impl *networkImpl) sendMessage(connection net.Conn, msg *message) utils.Tr
     return impl.send(connection, impl.packMessage(msg))
 }
 
-//goland:noinspection GoRedundantConversion
 func (impl *networkImpl) packMessage(msg *message) []byte {
     utils.Assert(msg.body != nil && int(msg.size) == len(msg.body) || msg.body == nil && msg.size == 0)
 
