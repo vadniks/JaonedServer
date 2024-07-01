@@ -9,7 +9,6 @@ import (
 )
 
 type User struct {
-    Id int32
     Username []byte
     Password []byte
 }
@@ -39,12 +38,10 @@ func Init() Database {
 
     users := make([]*User, 2)
     users[0] = &User{
-        0,
         []byte{'a', 'd', 'm', 'i', 'n', 0, 0, 0},
         []byte{'p', 'a', 's', 's', 0, 0, 0, 0},
     }
     users[1] = &User{
-        1,
         []byte{'u', 's', 'e', 'r', 0, 0, 0, 0},
         []byte{'p', 'a', 's', 's', 0, 0, 0, 0},
     }
@@ -72,17 +69,14 @@ func (impl *databaseImpl) AddUser(username []byte, password []byte) bool { // TO
     if impl.UserExists(username) { return false }
 
     found := false
-    id := int32(0)
 
     for _, user := range impl.users {
         if reflect.DeepEqual(user.Username, username) { found = true }
-        if user.Id > id { id = user.Id }
     }
 
     if found { return false }
 
     impl.users = append(impl.users, &User{
-        id + 1,
         username,
         password,
     })

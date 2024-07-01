@@ -68,7 +68,7 @@ func (impl *syncImpl) logIn(connection net.Conn, msg *message) bool {
         body = nil
     } else {
         body = make([]byte, 1)
-        impl.xClients.addClient(connection, user.Id)
+        impl.xClients.addClient(connection, &client{user})
     }
 
     impl.network.sendMessage(connection, &message{
@@ -118,12 +118,12 @@ func (impl *syncImpl) routeMessage(connection net.Conn, msg *message) bool {
     }
 
     if disconnect {
-        impl.xClients.removeClient2(connection)
+        impl.xClients.removeClient(connection)
     }
 
     return disconnect
 }
 
 func (impl *syncImpl) clientDisconnected(connection net.Conn) {
-    impl.xClients.removeClient2(connection)
+    impl.xClients.removeClient(connection)
 }

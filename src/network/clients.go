@@ -2,25 +2,25 @@
 package network
 
 import (
+    "JaonedServer/database"
     "JaonedServer/utils"
     "net"
-    "reflect"
-goSync "sync"
+    goSync "sync"
 )
 
 type clients interface {
-    addClient(connection net.Conn, userId int32)
-    removeClient(userId int32) bool
-    removeClient2(connection net.Conn) bool
+    addClient(connection net.Conn, xClient *client)
+    getClient(connection net.Conn) *client // nillable
+    removeClient(connection net.Conn) bool
 }
 
 type clientsImpl struct {
-    clients map[int32]*client
+    clients map[net.Conn]*client
     rwMutex goSync.RWMutex
 }
 
 type client struct {
-    connection net.Conn
+    *database.User
 }
 
 var clientsInitialized = false
@@ -30,45 +30,31 @@ func createClients() clients {
     clientsInitialized = true
 
     return &clientsImpl{
-        make(map[int32]*client),
+        make(map[net.Conn]*client),
         goSync.RWMutex{},
     }
 }
 
-func (impl *clientsImpl) addClient(connection net.Conn, userId int32) {
+func (impl *clientsImpl) addClient(connection net.Conn, xClient *client) {
     impl.rwMutex.Lock()
 
-    _, found := impl.clients[userId]
+    _, found := impl.clients[connection]
     utils.Assert(!found)
 
-    impl.clients[userId] = &client{
-        connection,
-    }
+    impl.clients[connection] = xClient
 
     impl.rwMutex.Unlock()
 }
 
-func (impl *clientsImpl) removeClient(userId int32) bool {
-    impl.rwMutex.Lock()
-
-    _, found := impl.clients[userId]
-    delete(impl.clients, userId)
-
-    impl.rwMutex.Unlock()
-    return found
+func (impl *clientsImpl) getClient(connection net.Conn) *client { // nillable
+    return impl.clients[connection]
 }
 
-func (impl *clientsImpl) removeClient2(connection net.Conn) bool {
+func (impl *clientsImpl) removeClient(connection net.Conn) bool {
     impl.rwMutex.Lock()
 
-    found := false
-    for userId, xClient := range impl.clients {
-        if reflect.DeepEqual(xClient.connection, connection) {
-            found = true
-            delete(impl.clients, userId)
-            break
-        }
-    }
+    _, found := impl.clients[connection]
+    delete(impl.clients, connection)
 
     impl.rwMutex.Unlock()
     return found
