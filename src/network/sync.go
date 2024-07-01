@@ -116,6 +116,8 @@ func (impl *syncImpl) routeMessage(connection net.Conn, msg *message) bool {
     switch msg.flag {
         case flagLogIn:
             disconnect = impl.logIn(connection, msg)
+        case flagRegister:
+            disconnect = impl.register(connection, msg)
         case flagShutdown:
             if msg.from == 0 { impl.network.shutdown() }
             disconnect = true
