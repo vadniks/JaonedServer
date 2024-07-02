@@ -14,18 +14,68 @@ type User struct {
     IsAdmin bool
 }
 
+type Vec2 struct {
+    X float32
+    Y float32
+}
+
+type DrawnElement struct {}
+
+type DrawnPointsSet struct {
+    DrawnElement
+    Width int32
+    Color uint32
+    Points []Vec2
+}
+
+type DrawnLine struct {
+    DrawnElement
+    Start Vec2
+    End Vec2
+    Width int32
+    Color int32
+}
+
+type DrawnText struct {
+    DrawnElement
+    Text []byte
+    Pos Vec2
+    Size int32
+    Color int32
+}
+
+type DrawnImage struct {
+    DrawnElement
+    pos Vec2
+    size Vec2
+    texture []byte
+}
+
+type Board struct {
+    id int32
+    title []byte
+    color uint32
+}
+
 type Database interface {
     Close()
+
     FindUser(username []byte) *User // nillable
     AddUser(username []byte, password []byte) bool
     RemoveUser(username []byte) bool
     GetAllUsers() []*User
     UserExists(username []byte) bool
+
+    addBoard(username []byte, board *Board)
+    getBoard(username []byte, id int32)
+    getBoards(username []byte) *Board // nillable
+    removeBoard(username []byte, id int32) bool
 }
 
 type DatabaseImpl struct {
     db *sql.DB
     users []*User // TODO: test only
+    boards []*Board // TODO: test only
 }
 
 var initialized = false
@@ -49,9 +99,22 @@ func Init() Database {
         false,
     }
 
+    boards := make([]*Board, 2)
+    boards[0] = &Board{
+        0,
+        []byte{'T', 'e', 's', 't', ' ', '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        0xffffffff,
+    }
+    boards[1] = &Board{
+        1,
+        []byte{'T', 'e', 's', 't', ' ', '2', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        0xaaaaaaaa,
+    }
+
     return &DatabaseImpl{
         nil,
         users,
+        boards,
     }
 }
 
@@ -98,4 +161,20 @@ func (impl *DatabaseImpl) GetAllUsers() []*User {
 
 func (impl *DatabaseImpl) UserExists(username []byte) bool { // TODO: stub
     return impl.FindUser(username) != nil
+}
+
+func (impl *DatabaseImpl) addBoard(username []byte, board *Board) { // TODO: stub
+
+}
+
+func (impl *DatabaseImpl) getBoard(username []byte, id int32) { // TODO: stub
+
+}
+
+func (impl *DatabaseImpl) getBoards(username []byte) *Board { // nillable // TODO: stub
+    return nil
+}
+
+func (impl *DatabaseImpl) removeBoard(username []byte, id int32) bool { // TODO: stub
+    return false
 }
