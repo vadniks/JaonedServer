@@ -19,38 +19,6 @@ type Vec2 struct {
     Y float32
 }
 
-type DrawnElement struct {}
-
-type DrawnPointsSet struct {
-    DrawnElement
-    Width int32
-    Color uint32
-    Points []Vec2
-}
-
-type DrawnLine struct {
-    DrawnElement
-    Start Vec2
-    End Vec2
-    Width int32
-    Color int32
-}
-
-type DrawnText struct {
-    DrawnElement
-    Text []byte
-    Pos Vec2
-    Size int32
-    Color int32
-}
-
-type DrawnImage struct {
-    DrawnElement
-    pos Vec2
-    size Vec2
-    texture []byte
-}
-
 type Board struct {
     id int32
     title []byte
