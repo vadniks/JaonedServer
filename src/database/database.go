@@ -8,6 +8,8 @@ import (
     "reflect"
 )
 
+const MaxCredentialSize = 16
+
 type User struct {
     Username []byte
     Password []byte
@@ -16,8 +18,8 @@ type User struct {
 
 type Board struct {
     id int32
+    color int32
     title []byte
-    color uint32
 }
 
 type Database interface {
@@ -29,16 +31,16 @@ type Database interface {
     GetAllUsers() []*User
     UserExists(username []byte) bool
 
-    addBoard(username []byte, board *Board)
-    getBoard(username []byte, id int32)
-    getBoards(username []byte) *Board // nillable
-    removeBoard(username []byte, id int32) bool
+    AddBoard(username []byte, board *Board)
+    GetBoard(username []byte, id int32) *Board // nillable
+    GetBoards(username []byte) []*Board // nillable
+    RemoveBoard(username []byte, id int32) bool
 }
 
 type DatabaseImpl struct {
     db *sql.DB
     users []*User // TODO: test only
-    boards []*Board // TODO: test only
+    boards map[[MaxCredentialSize]byte][]*Board // TODO: test only
 }
 
 var initialized = false
@@ -62,22 +64,25 @@ func Init() Database {
         false,
     }
 
-    boards := make([]*Board, 2)
-    boards[0] = &Board{
+    adminBoards := make([]*Board, 2)
+    adminBoards[0] = &Board{
         0,
+        0x10101010,
         []byte{'T', 'e', 's', 't', ' ', '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        0xffffffff,
     }
-    boards[1] = &Board{
+    adminBoards[1] = &Board{
         1,
+        0x25252525,
         []byte{'T', 'e', 's', 't', ' ', '2', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        0xaaaaaaaa,
     }
+
+    boards := make(map[[16]byte][]*Board)
+    boards[[MaxCredentialSize]byte{'a', 'd', 'm', 'i', 'n', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}] = adminBoards
 
     return &DatabaseImpl{
         nil,
         users,
-        boards,
+        make(map[[16]byte][]*Board),
     }
 }
 
@@ -126,18 +131,41 @@ func (impl *DatabaseImpl) UserExists(username []byte) bool { // TODO: stub
     return impl.FindUser(username) != nil
 }
 
-func (impl *DatabaseImpl) addBoard(username []byte, board *Board) { // TODO: stub
-
+func (impl *DatabaseImpl) AddBoard(username []byte, board *Board) { // TODO: stub
+    xUsername := [MaxCredentialSize]byte(username)
+    if impl.boards[xUsername] == nil { impl.boards[xUsername] = make([]*Board, 0) }
+    impl.boards[xUsername] = append(impl.boards[xUsername], board)
 }
 
-func (impl *DatabaseImpl) getBoard(username []byte, id int32) { // TODO: stub
-
+func (impl *DatabaseImpl) GetBoard(username []byte, id int32) *Board { // nillable // TODO: stub
+    xUsername := [16]byte(username)
+    if impl.boards[xUsername] != nil {
+        for _, board := range impl.boards[xUsername] {
+            if board.id == id { return board }
+        }
+        return nil
+    } else {
+        return nil
+    }
 }
 
-func (impl *DatabaseImpl) getBoards(username []byte) *Board { // nillable // TODO: stub
-    return nil
+func (impl *DatabaseImpl) GetBoards(username []byte) []*Board { // nillable // TODO: stub
+    xUsername := [16]byte(username)
+    return impl.boards[xUsername]
 }
 
-func (impl *DatabaseImpl) removeBoard(username []byte, id int32) bool { // TODO: stub
-    return false
+func (impl *DatabaseImpl) RemoveBoard(username []byte, id int32) bool { // TODO: stub
+    xUsername := [16]byte(username)
+    var newBoards []*Board
+
+    if impl.boards[xUsername] == nil { return false }
+
+    for _, board := range impl.boards[xUsername] {
+        if board.id != id {
+            newBoards = append(newBoards, board)
+        }
+    }
+
+    impl.boards[xUsername] = newBoards
+    return len(newBoards) < len(impl.boards[xUsername])
 }

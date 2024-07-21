@@ -5,7 +5,7 @@ import (
     "JaonedServer/database"
     "JaonedServer/utils"
     "math"
-"net"
+    "net"
     "reflect"
 )
 
@@ -21,7 +21,7 @@ const (
     flagText Flag = 6
     flagImage Flag = 7
 
-    maxCredentialSize = 16
+    maxCredentialSize = database.MaxCredentialSize
 )
 
 type Sync interface {
