@@ -4,7 +4,8 @@ package network
 import (
     "JaonedServer/database"
     "JaonedServer/utils"
-    "net"
+    "math"
+"net"
     "reflect"
 )
 
@@ -24,9 +25,11 @@ const (
 )
 
 type Sync interface {
+    sendBytes(connection net.Conn, bytes []byte, flag Flag)
     logIn(connection net.Conn, message *Message) bool
     register(connection net.Conn, message *Message) bool
     shutdown(connection net.Conn) bool
+    processPendingMessages(connection net.Conn, message *Message) []byte // nillable
     pointsSet(connection net.Conn, message *Message) bool
     line(connection net.Conn, message *Message) bool
     text(connection net.Conn, message *Message) bool
@@ -51,6 +54,27 @@ func createSync(network Network) Sync {
         database.Init(),
         network,
         createClients(),
+    }
+}
+
+func (impl *SyncImpl) sendBytes(connection net.Conn, bytes []byte, flag Flag) {
+    var start int32 = 0
+    var index int32 = 0
+    count := int32(math.Ceil(float64(len(bytes)) / float64(maxMessageBodySize)))
+    timestamp := int64(utils.CurrentTimeMillis())
+
+    for {
+        message := &Message{
+            flag,
+            index,
+            count,
+            timestamp,
+            bytes[start:(start + maxMessageBodySize)],
+        }
+
+        index++
+        if len(message.body) == 0 { break }
+        impl.network.sendMessage(connection, message)
     }
 }
 
@@ -151,7 +175,23 @@ func (impl *SyncImpl) shutdown(connection net.Conn) bool {
     return true
 }
 
+func (impl *SyncImpl) processPendingMessages(connection net.Conn, message *Message) []byte { // nillable
+    impl.clients.enqueueMessageToClient(connection, message)
+    if message.index < message.count - 1 { return nil }
+
+    var bytes []byte
+    for impl.clients.clientHasMessages(connection) {
+        bytes = append(bytes, impl.clients.dequeueMessageFromClient(connection).body...)
+    }
+
+    return bytes
+}
+
 func (impl *SyncImpl) pointsSet(connection net.Conn, message *Message) bool {
+    bytes := impl.processPendingMessages(connection, message)
+    if bytes == nil { return false }
+
+    impl.sendBytes(connection, bytes, flagPointsSet) // TODO: test only
     return false
 }
 

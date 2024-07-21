@@ -14,7 +14,7 @@ type Clients interface {
     removeClient(connection net.Conn) bool
     clientHasMessages(connection net.Conn) bool
     enqueueMessageToClient(connection net.Conn, message *Message)
-    dequeueMessageToClient(connection net.Conn) *Message // nillable
+    dequeueMessageFromClient(connection net.Conn) *Message // nillable
 }
 
 type ClientsImpl struct {
@@ -77,7 +77,7 @@ func (impl *ClientsImpl) enqueueMessageToClient(connection net.Conn, message *Me
     impl.pendingMessages[connection] = append(impl.pendingMessages[connection], message)
 }
 
-func (impl *ClientsImpl) dequeueMessageToClient(connection net.Conn) *Message { // nillable
+func (impl *ClientsImpl) dequeueMessageFromClient(connection net.Conn) *Message { // nillable
     if impl.pendingMessages[connection] == nil { return nil }
 
     message := impl.pendingMessages[connection][0]
