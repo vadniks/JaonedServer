@@ -27,6 +27,10 @@ type Sync interface {
     logIn(connection net.Conn, message *Message) bool
     register(connection net.Conn, message *Message) bool
     shutdown(connection net.Conn) bool
+    pointsSet(connection net.Conn, message *Message) bool
+    line(connection net.Conn, message *Message) bool
+    text(connection net.Conn, message *Message) bool
+    image(connection net.Conn, message *Message) bool
     routeMessage(connection net.Conn, message *Message) bool
     clientDisconnected(connection net.Conn)
 }
@@ -147,6 +151,22 @@ func (impl *SyncImpl) shutdown(connection net.Conn) bool {
     return true
 }
 
+func (impl *SyncImpl) pointsSet(connection net.Conn, message *Message) bool {
+    return false
+}
+
+func (impl *SyncImpl) line(connection net.Conn, message *Message) bool {
+    return false
+}
+
+func (impl *SyncImpl) text(connection net.Conn, message *Message) bool {
+    return false
+}
+
+func (impl *SyncImpl) image(connection net.Conn, message *Message) bool {
+    return false
+}
+
 func (impl *SyncImpl) routeMessage(connection net.Conn, message *Message) bool {
     disconnect := false
 
@@ -157,6 +177,14 @@ func (impl *SyncImpl) routeMessage(connection net.Conn, message *Message) bool {
             disconnect = impl.register(connection, message)
         case flagShutdown:
             disconnect = impl.shutdown(connection)
+        case flagPointsSet:
+            disconnect = impl.pointsSet(connection, message)
+        case flagLine:
+            disconnect = impl.line(connection, message)
+        case flagText:
+            disconnect = impl.text(connection, message)
+        case flagImage:
+            disconnect = impl.image(connection, message)
     }
 
     if disconnect {
