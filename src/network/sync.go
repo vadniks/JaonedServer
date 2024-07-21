@@ -196,14 +196,26 @@ func (impl *SyncImpl) pointsSet(connection net.Conn, message *Message) bool {
 }
 
 func (impl *SyncImpl) line(connection net.Conn, message *Message) bool {
+    bytes := impl.processPendingMessages(connection, message)
+    if bytes == nil { return false }
+
+    impl.sendBytes(connection, bytes, flagLine) // TODO: test only
     return false
 }
 
 func (impl *SyncImpl) text(connection net.Conn, message *Message) bool {
+    bytes := impl.processPendingMessages(connection, message)
+    if bytes == nil { return false }
+
+    impl.sendBytes(connection, bytes, flagText) // TODO: test only
     return false
 }
 
 func (impl *SyncImpl) image(connection net.Conn, message *Message) bool {
+    bytes := impl.processPendingMessages(connection, message)
+    if bytes == nil { return false }
+
+    impl.sendBytes(connection, bytes, flagImage) // TODO: test only
     return false
 }
 
