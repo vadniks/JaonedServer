@@ -32,15 +32,18 @@ type NetworkImpl struct {
 }
 
 type Message struct {
-    size int32
-    flag actionFlag
+    flag Flag
+    index int32
+    count int32
+    timestamp int64
+    // size int32
     body []byte
 }
 
 const (
-	messageHeadSize = 4 + 4 // 8
-    maxMessageBodySize = 128 - messageHeadSize // 120
-    maxMessageSize = messageHeadSize + maxMessageBodySize // 128
+	messageHeadSize = 4 + 4 + 4 + 8 + 4 // 24
+    maxMessageSize = 128
+    maxMessageBodySize = maxMessageSize - messageHeadSize // 104
 )
 
 var networkInitialized = false
@@ -118,14 +121,18 @@ func (impl *NetworkImpl) receiveMessage(connection net.Conn) (*Message, error) {
     if result == utils.Neutral { return nil, nil }
 
     message := new(Message)
+    var size int32
 
-    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(message.size))), 4), unsafe.Slice(&(head[0]), 4))
-    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(message.flag))), 4), unsafe.Slice(&(head[4]), 4))
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(message.flag))), 4), unsafe.Slice(&(head[0]), 4))
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(message.index))), 4), unsafe.Slice(&(head[4]), 4))
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(message.count))), 4), unsafe.Slice(&(head[8]), 4))
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(message.timestamp))), 8), unsafe.Slice(&(head[12]), 8))
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(size))), 4), unsafe.Slice(&(head[20]), 4))
 
-    utils.Assert(message.size <= maxMessageBodySize)
+    utils.Assert(size <= maxMessageBodySize)
 
-    if message.size > 0 {
-        body := make([]byte, message.size)
+    if size > 0 {
+        body := make([]byte, size)
         result := impl.receive(connection, body)
 
         if result == utils.Negative { return nil, errors.New("") }
@@ -158,14 +165,19 @@ func (impl *NetworkImpl) sendMessage(connection net.Conn, message *Message) util
 }
 
 func (impl *NetworkImpl) packMessage(message *Message) []byte {
-    utils.Assert(message.body != nil && int(message.size) == len(message.body) || message.body == nil && message.size == 0)
+    size := len(message.body)
 
-    bytes := make([]byte, messageHeadSize + message.size)
+    utils.Assert(message.body != nil && size > 0 || message.body == nil)
 
-    copy(unsafe.Slice(&(bytes[0]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(message.size))), 4))
-    copy(unsafe.Slice(&(bytes[4]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(message.flag))), 4))
+    bytes := make([]byte, messageHeadSize + size)
 
-    if message.body != nil { copy(unsafe.Slice(&(bytes[8]), message.size), unsafe.Slice(&(message.body[0]), message.size)) }
+    copy(unsafe.Slice(&(bytes[0]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(message.flag))), 4))
+    copy(unsafe.Slice(&(bytes[4]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(message.index))), 4))
+    copy(unsafe.Slice(&(bytes[8]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(message.count))), 4))
+    copy(unsafe.Slice(&(bytes[12]), 8), unsafe.Slice((*byte) (unsafe.Pointer(&(message.timestamp))), 8))
+    copy(unsafe.Slice(&(bytes[20]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(size))), 4))
+
+    if message.body != nil { copy(unsafe.Slice(&(bytes[24]), size), unsafe.Slice(&(message.body[0]), size)) }
 
     return bytes
 }

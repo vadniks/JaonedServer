@@ -14,11 +14,6 @@ type User struct {
     IsAdmin bool
 }
 
-type Vec2 struct {
-    X float32
-    Y float32
-}
-
 type Board struct {
     id int32
     title []byte

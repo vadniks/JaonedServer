@@ -8,18 +8,19 @@ import (
     "reflect"
 )
 
-type actionFlag int32
+type Flag int32
 
 const (
-    flagLogIn actionFlag = 0
-    flagRegister actionFlag = 1
-    flagFinish actionFlag = 2
-    flagError actionFlag = 3
-    flagSuccess actionFlag = 4
-    flagShutdown actionFlag = 5
+    flagError Flag = 0
+    flagLogIn Flag = 1
+    flagRegister Flag = 2
+    flagShutdown Flag = 3
+    flagPointsSet Flag = 4
+    flagLine Flag = 5
+    flagText Flag = 6
+    flagImage Flag = 7
 
-    maxUsernameSize = 8
-    maxPasswordSize = 8
+    maxCredentialSize = 16
 )
 
 type Sync interface {
@@ -50,19 +51,21 @@ func createSync(network Network) Sync {
 }
 
 func (impl *SyncImpl) logIn(connection net.Conn, message *Message) bool {
-    utils.Assert(message.body != nil && message.size == maxUsernameSize + maxPasswordSize)
+    utils.Assert(message.body != nil && len(message.body) == maxCredentialSize * 2)
 
     if impl.clients.getClient(connection) != nil {
         impl.network.sendMessage(connection, &Message{
-            0,
             flagLogIn,
+            0,
+            1,
+            int64(utils.CurrentTimeMillis()),
             nil,
         })
         return true
     }
 
-    username := message.body[0:maxUsernameSize]
-    password := message.body[maxUsernameSize:(maxUsernameSize + maxPasswordSize)]
+    username := message.body[0:maxCredentialSize]
+    password := message.body[maxCredentialSize:(maxCredentialSize + maxCredentialSize)]
 
     user := impl.db.FindUser(username)
     var authenticated bool
@@ -82,8 +85,10 @@ func (impl *SyncImpl) logIn(connection net.Conn, message *Message) bool {
     }
 
     impl.network.sendMessage(connection, &Message{
-        int32(len(body)),
         flagLogIn,
+        0,
+        1,
+        int64(utils.CurrentTimeMillis()),
         body,
     })
 
@@ -91,19 +96,21 @@ func (impl *SyncImpl) logIn(connection net.Conn, message *Message) bool {
 }
 
 func (impl *SyncImpl) register(connection net.Conn, message *Message) bool {
-    utils.Assert(message.body != nil && message.size == maxUsernameSize + maxPasswordSize)
+    utils.Assert(message.body != nil && len(message.body) == maxCredentialSize * 2)
 
     if impl.clients.getClient(connection) != nil {
         impl.network.sendMessage(connection, &Message{
-            0,
             flagRegister,
+            0,
+            1,
+            int64(utils.CurrentTimeMillis()),
             nil,
         })
         return true
     }
 
-    username := message.body[0:maxUsernameSize]
-    password := message.body[maxUsernameSize:(maxUsernameSize + maxPasswordSize)]
+    username := message.body[0:maxCredentialSize]
+    password := message.body[maxCredentialSize:(maxCredentialSize + maxCredentialSize)]
 
     successful := impl.db.AddUser(username, password)
 
@@ -115,8 +122,10 @@ func (impl *SyncImpl) register(connection net.Conn, message *Message) bool {
     }
 
     impl.network.sendMessage(connection, &Message{
-        int32(len(body)),
         flagRegister,
+        0,
+        1,
+        int64(utils.CurrentTimeMillis()),
         body,
     })
 
@@ -128,8 +137,10 @@ func (impl *SyncImpl) shutdown(connection net.Conn) bool {
         impl.network.shutdown()
     } else {
         impl.network.sendMessage(connection, &Message{
-            0,
             flagError,
+            0,
+            1,
+            int64(utils.CurrentTimeMillis()),
             nil,
         })
     }
