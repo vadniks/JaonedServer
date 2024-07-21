@@ -8,7 +8,10 @@ import (
     "reflect"
 )
 
-const MaxCredentialSize = 16
+const (
+	MaxCredentialSize = 16
+    MaxBoardTitleSize = 16
+)
 
 type User struct {
     Username []byte
