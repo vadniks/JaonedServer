@@ -81,6 +81,9 @@ func (impl *ClientsImpl) dequeueMessageToClient(connection net.Conn) *Message { 
     if impl.pendingMessages[connection] == nil { return nil }
 
     message := impl.pendingMessages[connection][0]
+
     impl.pendingMessages[connection] = impl.pendingMessages[connection][1:]
+    if len(impl.pendingMessages[connection]) == 0 { impl.pendingMessages[connection] = nil }
+
     return message
 }
