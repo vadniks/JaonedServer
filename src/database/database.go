@@ -20,9 +20,10 @@ type User struct {
 }
 
 type Board struct {
-    id int32
-    color int32
-    title []byte
+    Id int32
+    Color int32
+    // Size int32
+    Title []byte
 }
 
 type Database interface {
@@ -144,7 +145,7 @@ func (impl *DatabaseImpl) GetBoard(username []byte, id int32) *Board { // nillab
     xUsername := [16]byte(username)
     if impl.boards[xUsername] != nil {
         for _, board := range impl.boards[xUsername] {
-            if board.id == id { return board }
+            if board.Id == id { return board }
         }
         return nil
     } else {
@@ -164,7 +165,7 @@ func (impl *DatabaseImpl) RemoveBoard(username []byte, id int32) bool { // TODO:
     if impl.boards[xUsername] == nil { return false }
 
     for _, board := range impl.boards[xUsername] {
-        if board.id != id {
+        if board.Id != id {
             newBoards = append(newBoards, board)
         }
     }

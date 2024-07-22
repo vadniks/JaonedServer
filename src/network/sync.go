@@ -7,6 +7,7 @@ import (
     "math"
     "net"
     "reflect"
+    "unsafe"
 )
 
 type Flag int32
@@ -16,10 +17,14 @@ const (
     flagLogIn Flag = 1
     flagRegister Flag = 2
     flagShutdown Flag = 3
-    flagPointsSet Flag = 4
-    flagLine Flag = 5
-    flagText Flag = 6
-    flagImage Flag = 7
+    flagCreateBoard Flag = 4
+    flagGetBoard Flag = 5
+    flagGetBoards Flag = 6
+    flagDeleteBoard Flag = 7
+    flagPointsSet Flag = 8
+    flagLine Flag = 9
+    flagText Flag = 10
+    flagImage Flag = 11
 
     maxCredentialSize = database.MaxCredentialSize
 )
@@ -30,6 +35,12 @@ type Sync interface {
     register(connection net.Conn, message *Message) bool
     shutdown(connection net.Conn) bool
     processPendingMessages(connection net.Conn, message *Message) []byte // nillable
+    packBoard(board *database.Board) []byte
+    unpackBoard(bytes []byte) *database.Board
+    createBoard(connection net.Conn, message *Message) bool
+    getBoard(connection net.Conn, message *Message) bool
+    getBoards(connection net.Conn, message *Message) bool
+    deleteBoard(connection net.Conn, message *Message) bool
     pointsSet(connection net.Conn, message *Message) bool
     line(connection net.Conn, message *Message) bool
     text(connection net.Conn, message *Message) bool
@@ -185,6 +196,87 @@ func (impl *SyncImpl) processPendingMessages(connection net.Conn, message *Messa
     }
 
     return bytes
+}
+
+func (impl *SyncImpl) packBoard(board *database.Board) []byte {
+    size := len(board.Title)
+    utils.Assert(size <= database.MaxBoardTitleSize)
+
+    bytes := make([]byte, 4 + 4 + 4 + size)
+    copy(unsafe.Slice(&(bytes[0]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(board.Id))), 4))
+    copy(unsafe.Slice(&(bytes[4]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(board.Color))), 4))
+    copy(unsafe.Slice(&(bytes[8]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(size))), 4))
+    copy(unsafe.Slice(&(bytes[12]), 4), board.Title)
+    return bytes
+}
+
+func (impl *SyncImpl) unpackBoard(bytes []byte) *database.Board {
+    board := new(database.Board)
+    var size int32
+
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(board.Id))), 4), unsafe.Slice(&(bytes[0]), 4))
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(board.Color))), 4), unsafe.Slice(&(bytes[4]), 4))
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(size))), 4), unsafe.Slice(&(bytes[8]), 4))
+
+    board.Title = make([]byte, size)
+    copy(board.Title, unsafe.Slice(&(bytes[12]), size))
+
+    return board
+}
+
+func (impl *SyncImpl) createBoard(connection net.Conn, message *Message) bool {
+    client := impl.clients.getClient(connection)
+    if client == nil { return true }
+
+    impl.db.AddBoard(client.Username, impl.unpackBoard(message.body))
+
+    impl.network.sendMessage(connection, &Message{
+        flagCreateBoard,
+        0,
+        1,
+        int64(utils.CurrentTimeMillis()),
+        []byte{1},
+    })
+
+    return false
+}
+
+func (impl *SyncImpl) getBoard(connection net.Conn, message *Message) bool {
+    client := impl.clients.getClient(connection)
+    if client == nil { return true }
+
+    var id int32
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(id))), 4), unsafe.Slice(&(message.body[0]), 4))
+
+    board := impl.db.GetBoard(client.Username, id)
+
+    if board == nil {
+        impl.network.sendMessage(connection, &Message{
+            flagGetBoard,
+            0,
+            1,
+            int64(utils.CurrentTimeMillis()),
+            nil,
+        })
+    } else {
+        impl.network.sendMessage(connection, &Message{
+            flagGetBoard,
+            0,
+            1,
+            int64(utils.CurrentTimeMillis()),
+            impl.packBoard(board),
+        })
+    }
+
+    return false
+}
+
+func (impl *SyncImpl) getBoards(connection net.Conn, message *Message) bool {
+    return false
+}
+
+func (impl *SyncImpl) deleteBoard(connection net.Conn, message *Message) bool {
+    return false
 }
 
 func (impl *SyncImpl) pointsSet(connection net.Conn, message *Message) bool {
