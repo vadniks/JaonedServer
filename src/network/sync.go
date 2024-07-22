@@ -39,7 +39,7 @@ type Sync interface {
     unpackBoard(bytes []byte) *database.Board
     createBoard(connection net.Conn, message *Message) bool
     getBoard(connection net.Conn, message *Message) bool
-    getBoards(connection net.Conn, message *Message) bool
+    getBoards(connection net.Conn) bool
     deleteBoard(connection net.Conn, message *Message) bool
     pointsSet(connection net.Conn, message *Message) bool
     line(connection net.Conn, message *Message) bool
@@ -271,11 +271,61 @@ func (impl *SyncImpl) getBoard(connection net.Conn, message *Message) bool {
     return false
 }
 
-func (impl *SyncImpl) getBoards(connection net.Conn, message *Message) bool {
+func (impl *SyncImpl) getBoards(connection net.Conn) bool {
+    client := impl.clients.getClient(connection)
+    if client == nil { return true }
+
+    boards := impl.db.GetBoards(client.Username)
+
+    if len(boards) == 0 {
+        impl.network.sendMessage(connection, &Message{
+            flagGetBoards,
+            0,
+            1,
+            int64(utils.CurrentTimeMillis()),
+            nil,
+        })
+    } else {
+        var index int32 = 0
+        timestamp := int64(utils.CurrentTimeMillis())
+
+        for _, board := range boards {
+            impl.network.sendMessage(connection, &Message{
+                flagGetBoards,
+                index,
+                int32(len(boards)),
+                timestamp,
+                impl.packBoard(board),
+            })
+            index++
+        }
+    }
+
     return false
 }
 
 func (impl *SyncImpl) deleteBoard(connection net.Conn, message *Message) bool {
+    client := impl.clients.getClient(connection)
+    if client == nil { return true }
+
+    var id int32
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(id))), 4), unsafe.Slice(&(message.body[0]), 4))
+
+    var result []byte
+    if impl.db.RemoveBoard(client.Username, id) {
+        result = []byte{1}
+    } else {
+        result = nil
+    }
+
+    impl.network.sendMessage(connection, &Message{
+        flagDeleteBoard,
+        0,
+        1,
+        int64(utils.CurrentTimeMillis()),
+        result,
+    })
+
     return false
 }
 
