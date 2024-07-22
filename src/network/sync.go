@@ -371,6 +371,14 @@ func (impl *SyncImpl) routeMessage(connection net.Conn, message *Message) bool {
             disconnect = impl.register(connection, message)
         case flagShutdown:
             disconnect = impl.shutdown(connection)
+        case flagCreateBoard:
+            disconnect = impl.createBoard(connection, message)
+        case flagGetBoard:
+            disconnect = impl.getBoard(connection, message)
+        case flagGetBoards:
+            disconnect = impl.getBoards(connection)
+        case flagDeleteBoard:
+            disconnect = impl.deleteBoard(connection, message)
         case flagPointsSet:
             disconnect = impl.pointsSet(connection, message)
         case flagLine:
