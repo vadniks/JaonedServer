@@ -71,12 +71,12 @@ func Init() Database {
     adminBoards := make([]*Board, 2)
     adminBoards[0] = &Board{
         0,
-        0x10101010,
+        0x7f101010,
         []byte{'T', 'e', 's', 't', ' ', '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     }
     adminBoards[1] = &Board{
         1,
-        0x25252525,
+        0x7f252525,
         []byte{'T', 'e', 's', 't', ' ', '2', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     }
 
