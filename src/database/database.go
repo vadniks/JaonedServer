@@ -86,7 +86,7 @@ func Init() Database {
     return &DatabaseImpl{
         nil,
         users,
-        make(map[[16]byte][]*Board),
+        boards,
     }
 }
 
