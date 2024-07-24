@@ -170,6 +170,7 @@ func (impl *DatabaseImpl) RemoveBoard(username []byte, id int32) bool { // TODO:
         }
     }
 
+    previousLength := len(impl.boards[xUsername])
     impl.boards[xUsername] = newBoards
-    return len(newBoards) < len(impl.boards[xUsername])
+    return len(newBoards) < previousLength
 }
