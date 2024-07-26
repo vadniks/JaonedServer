@@ -138,6 +138,13 @@ func (impl *DatabaseImpl) UserExists(username []byte) bool { // TODO: stub
 func (impl *DatabaseImpl) AddBoard(username []byte, board *Board) { // TODO: stub
     xUsername := [MaxCredentialSize]byte(username)
     if impl.boards[xUsername] == nil { impl.boards[xUsername] = make([]*Board, 0) }
+
+    var maxId int32 = 0
+    for _, board := range impl.boards[xUsername] {
+        if maxId < board.Id { maxId = board.Id }
+    }
+
+    board.Id = maxId + 1
     impl.boards[xUsername] = append(impl.boards[xUsername], board)
 }
 
