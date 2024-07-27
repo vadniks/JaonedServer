@@ -75,12 +75,17 @@ func (impl *SyncImpl) sendBytes(connection net.Conn, bytes []byte, flag Flag) {
     timestamp := int64(utils.CurrentTimeMillis())
 
     for {
+        if start >= int32(len(bytes)) { break }
+
+        end := start + maxMessageBodySize
+        if end >= int32(len(bytes)) { end = int32(len(bytes)) }
+
         message := &Message{
             flag,
             index,
             count,
             timestamp,
-            bytes[start:(start + maxMessageBodySize)],
+            bytes[start:end],
         }
 
         start += int32(len(message.body))
