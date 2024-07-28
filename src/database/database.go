@@ -208,6 +208,7 @@ func (impl *DatabaseImpl) AddElement(element Element, board int32, username []by
     copy(unsafe.Slice(&(key[0]), MaxCredentialSize), username)
     copy(unsafe.Slice(&(key[MaxCredentialSize]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(board))), 4))
 
+    if impl.elements[key] == nil { impl.elements[key] = make([]Element, 0) }
     impl.elements[key] = append(impl.elements[key], element)
 }
 
@@ -218,6 +219,8 @@ func (impl *DatabaseImpl) RemoveLastElement(board int32, username []byte) { // T
 
     if len(impl.elements[key]) > 0 {
         impl.elements[key] = impl.elements[key][:(len(impl.elements[key]) - 1)]
+    } else {
+        impl.elements[key] = nil
     }
 }
 
