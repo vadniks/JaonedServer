@@ -382,6 +382,9 @@ func (impl *SyncImpl) image(connection net.Conn, message *Message) bool {
 
 func (impl *SyncImpl) undo(connection net.Conn) bool {
     if impl.clients.getClient(connection) == nil { return true }
+
+
+
     return false
 }
 

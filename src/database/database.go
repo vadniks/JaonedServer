@@ -6,11 +6,19 @@ import (
     "database/sql"
     _ "github.com/lib/pq"
     "reflect"
+    "unsafe"
 )
 
 const (
 	MaxCredentialSize = 16
     MaxBoardTitleSize = 16
+)
+
+const ( // TODO: test only
+    ElementPointsSet ElementType = 0
+    ElementLine ElementType = 1
+    ElementText ElementType = 2
+    ElementImage ElementType = 3
 )
 
 type User struct {
@@ -26,6 +34,13 @@ type Board struct {
     Title []byte
 }
 
+type ElementType int32 // TODO: test only
+
+type Element struct { // TODO: test only
+    Type ElementType
+    Bytes []byte
+}
+
 type Database interface {
     Close()
 
@@ -39,12 +54,17 @@ type Database interface {
     GetBoard(username []byte, id int32) *Board // nillable
     GetBoards(username []byte) []*Board // nillable
     RemoveBoard(username []byte, id int32) bool
+
+    AddElement(element Element, board int32, username []byte)
+    RemoveLastElement(board int32, username []byte)
+    GetElements(board int32, username []byte) []Element
 }
 
 type DatabaseImpl struct {
     db *sql.DB
     users []*User // TODO: test only
     boards map[[MaxCredentialSize]byte][]*Board // TODO: test only
+    elements map[[MaxCredentialSize + 4]byte][]Element // TODO: test only
 }
 
 var initialized = false
@@ -53,7 +73,7 @@ func Init() Database {
     utils.Assert(!initialized)
     initialized = true
 
-    //db, err := sql.Open("postgres", "postgres://server:server@localhost:5432/db")
+    //db, err := sql.Open("postgres", "postgres://server:server@localhost:5432/db") // TODO
     //utils.Assert(err == nil)
 
     users := make([]*User, 2)
@@ -87,6 +107,7 @@ func Init() Database {
         nil,
         users,
         boards,
+        make(map[[MaxCredentialSize + 4]byte][]Element),
     }
 }
 
@@ -180,4 +201,28 @@ func (impl *DatabaseImpl) RemoveBoard(username []byte, id int32) bool { // TODO:
     previousLength := len(impl.boards[xUsername])
     impl.boards[xUsername] = newBoards
     return len(newBoards) < previousLength
+}
+
+func (impl *DatabaseImpl) AddElement(element Element, board int32, username []byte) { // TODO: stub
+    key := [MaxCredentialSize + 4]byte{}
+    copy(unsafe.Slice(&(key[0]), MaxCredentialSize), username)
+    copy(unsafe.Slice(&(key[MaxCredentialSize]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(board))), 4))
+
+    impl.elements[key] = append(impl.elements[key], element)
+}
+
+func (impl *DatabaseImpl) RemoveLastElement(board int32, username []byte) { // TODO: stub
+    key := [MaxCredentialSize + 4]byte{}
+    copy(unsafe.Slice(&(key[0]), MaxCredentialSize), username)
+    copy(unsafe.Slice(&(key[MaxCredentialSize]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(board))), 4))
+
+    impl.elements[key] = impl.elements[key][:(len(impl.elements[key]) - 1)]
+}
+
+func (impl *DatabaseImpl) GetElements(board int32, username []byte) []Element { // TODO: stub
+    key := [MaxCredentialSize + 4]byte{}
+    copy(unsafe.Slice(&(key[0]), MaxCredentialSize), username)
+    copy(unsafe.Slice(&(key[MaxCredentialSize]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(board))), 4))
+
+    return impl.elements[key]
 }
