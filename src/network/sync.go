@@ -341,50 +341,54 @@ func (impl *SyncImpl) deleteBoard(connection net.Conn, message *Message) bool {
 }
 
 func (impl *SyncImpl) pointsSet(connection net.Conn, message *Message) bool {
-    if impl.clients.getClient(connection) == nil { return true }
+    client := impl.clients.getClient(connection)
+    if client == nil { return true }
 
     bytes := impl.processPendingMessages(connection, message)
     if bytes == nil { return false }
 
-    impl.sendBytes(connection, bytes, flagPointsSet) // TODO: test only
+    impl.db.AddElement(database.Element{database.ElementPointsSet, bytes}, client.board, client.Username)
     return false
 }
 
 func (impl *SyncImpl) line(connection net.Conn, message *Message) bool {
-    if impl.clients.getClient(connection) == nil { return true }
+    client := impl.clients.getClient(connection)
+    if client == nil { return true }
 
     bytes := impl.processPendingMessages(connection, message)
     if bytes == nil { return false }
 
-    impl.sendBytes(connection, bytes, flagLine) // TODO: test only
+    impl.db.AddElement(database.Element{database.ElementLine, bytes}, client.board, client.Username)
     return false
 }
 
 func (impl *SyncImpl) text(connection net.Conn, message *Message) bool {
-    if impl.clients.getClient(connection) == nil { return true }
+    client := impl.clients.getClient(connection)
+    if client == nil { return true }
 
     bytes := impl.processPendingMessages(connection, message)
     if bytes == nil { return false }
 
-    impl.sendBytes(connection, bytes, flagText) // TODO: test only
+    impl.db.AddElement(database.Element{database.ElementText, bytes}, client.board, client.Username)
     return false
 }
 
 func (impl *SyncImpl) image(connection net.Conn, message *Message) bool {
-    if impl.clients.getClient(connection) == nil { return true }
+    client := impl.clients.getClient(connection)
+    if client == nil { return true }
 
     bytes := impl.processPendingMessages(connection, message)
     if bytes == nil { return false }
 
-    impl.sendBytes(connection, bytes, flagImage) // TODO: test only
+    impl.db.AddElement(database.Element{database.ElementImage, bytes}, client.board, client.Username)
     return false
 }
 
 func (impl *SyncImpl) undo(connection net.Conn) bool {
-    if impl.clients.getClient(connection) == nil { return true }
+    client := impl.clients.getClient(connection)
+    if client == nil { return true }
 
-
-
+    impl.db.RemoveLastElement(client.board, client.Username)
     return false
 }
 
