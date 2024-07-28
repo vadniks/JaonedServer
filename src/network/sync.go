@@ -26,6 +26,7 @@ const (
     flagText Flag = 10
     flagImage Flag = 11
     flagUndo Flag = 12
+    flagSelectBoard Flag = 13
 
     maxCredentialSize = database.MaxCredentialSize
 )
@@ -47,6 +48,7 @@ type Sync interface {
     text(connection net.Conn, message *Message) bool
     image(connection net.Conn, message *Message) bool
     undo(connection net.Conn) bool
+    selectBoard(connection net.Conn, message *Message) bool
     routeMessage(connection net.Conn, message *Message) bool
     clientDisconnected(connection net.Conn)
 }
@@ -129,7 +131,7 @@ func (impl *SyncImpl) logIn(connection net.Conn, message *Message) bool {
         body = nil
     } else {
         body = make([]byte, 1)
-        impl.clients.addClient(connection, &Client{user})
+        impl.clients.addClient(connection, &Client{user, make([]*Message, 0)})
     }
 
     impl.network.sendMessage(connection, &Message{
@@ -375,6 +377,11 @@ func (impl *SyncImpl) undo(connection net.Conn) bool {
     return false
 }
 
+func (impl *SyncImpl) selectBoard(connection net.Conn, message *Message) bool {
+
+    return false
+}
+
 func (impl *SyncImpl) routeMessage(connection net.Conn, message *Message) bool {
     disconnect := false
 
@@ -403,6 +410,8 @@ func (impl *SyncImpl) routeMessage(connection net.Conn, message *Message) bool {
             disconnect = impl.image(connection, message)
         case flagUndo:
             disconnect = impl.undo(connection)
+        case flagSelectBoard:
+            disconnect = impl.selectBoard(connection, message)
     }
 
     if disconnect {

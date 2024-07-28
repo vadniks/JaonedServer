@@ -20,11 +20,11 @@ type Clients interface {
 type ClientsImpl struct {
     clients map[net.Conn]*Client
     rwMutex sync.RWMutex
-    pendingMessages map[net.Conn][]*Message
 }
 
 type Client struct {
     *database.User
+    pendingMessages []*Message
 }
 
 var clientsInitialized = false
@@ -36,7 +36,6 @@ func createClients() Clients {
     return &ClientsImpl{
         make(map[net.Conn]*Client),
         sync.RWMutex{},
-        make(map[net.Conn][]*Message),
     }
 }
 
@@ -66,24 +65,24 @@ func (impl *ClientsImpl) removeClient(connection net.Conn) bool {
 }
 
 func (impl *ClientsImpl) clientHasMessages(connection net.Conn) bool {
-    return len(impl.pendingMessages[connection]) > 0
+    return len(impl.clients[connection].pendingMessages) > 0
 }
 
 func (impl *ClientsImpl) enqueueMessageToClient(connection net.Conn, message *Message) {
-    if impl.pendingMessages[connection] == nil {
-        impl.pendingMessages[connection] = make([]*Message, 0)
+    if impl.clients[connection].pendingMessages == nil {
+        impl.clients[connection].pendingMessages = make([]*Message, 0)
     }
 
-    impl.pendingMessages[connection] = append(impl.pendingMessages[connection], message)
+    impl.clients[connection].pendingMessages = append(impl.clients[connection].pendingMessages, message)
 }
 
 func (impl *ClientsImpl) dequeueMessageFromClient(connection net.Conn) *Message { // nillable
-    if impl.pendingMessages[connection] == nil { return nil }
+    if impl.clients[connection].pendingMessages == nil { return nil }
 
-    message := impl.pendingMessages[connection][0]
+    message := impl.clients[connection].pendingMessages[0]
 
-    impl.pendingMessages[connection] = impl.pendingMessages[connection][1:]
-    if len(impl.pendingMessages[connection]) == 0 { impl.pendingMessages[connection] = nil }
+    impl.clients[connection].pendingMessages = impl.clients[connection].pendingMessages[1:]
+    if len(impl.clients[connection].pendingMessages) == 0 { impl.clients[connection].pendingMessages = nil }
 
     return message
 }
