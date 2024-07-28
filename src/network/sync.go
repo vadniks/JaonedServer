@@ -27,6 +27,7 @@ const (
     flagImage Flag = 11
     flagUndo Flag = 12
     flagSelectBoard Flag = 13
+    flagGetBoardElements Flag = 14
 
     maxCredentialSize = database.MaxCredentialSize
 )
@@ -49,6 +50,7 @@ type Sync interface {
     image(connection net.Conn, message *Message) bool
     undo(connection net.Conn) bool
     selectBoard(connection net.Conn, message *Message) bool
+    boardElements(connection net.Conn) bool
     routeMessage(connection net.Conn, message *Message) bool
     clientDisconnected(connection net.Conn)
 }
@@ -404,6 +406,29 @@ func (impl *SyncImpl) selectBoard(connection net.Conn, message *Message) bool {
     return false
 }
 
+func (impl *SyncImpl) boardElements(connection net.Conn) bool {
+    client := impl.clients.getClient(connection)
+    if client == nil { return true }
+
+    for _, element := range impl.db.GetElements(client.board, client.Username) {
+        bytes := make([]byte, 4 + len(element.Bytes))
+        copy(unsafe.Slice(&(bytes[0]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(element.Type))), 4))
+        copy(unsafe.Slice(&(bytes[4]), len(element.Bytes)), element.Bytes)
+
+        impl.sendBytes(connection, bytes, flagGetBoardElements)
+    }
+
+    impl.network.sendMessage(connection, &Message{
+        flagGetBoardElements,
+        0,
+        1,
+        int64(utils.CurrentTimeMillis()),
+        nil,
+    })
+
+    return false
+}
+
 func (impl *SyncImpl) routeMessage(connection net.Conn, message *Message) bool {
     disconnect := false
 
@@ -434,6 +459,8 @@ func (impl *SyncImpl) routeMessage(connection net.Conn, message *Message) bool {
             disconnect = impl.undo(connection)
         case flagSelectBoard:
             disconnect = impl.selectBoard(connection, message)
+        case flagGetBoardElements:
+            disconnect = impl.boardElements(connection)
     }
 
     if disconnect {

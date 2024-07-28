@@ -34,9 +34,9 @@ type Board struct {
     Title []byte
 }
 
-type ElementType int32 // TODO: test only
+type ElementType int32
 
-type Element struct { // TODO: test only
+type Element struct {
     Type ElementType
     Bytes []byte
 }
