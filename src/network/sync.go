@@ -25,6 +25,7 @@ const (
     flagLine Flag = 9
     flagText Flag = 10
     flagImage Flag = 11
+    flagUndo Flag = 12
 
     maxCredentialSize = database.MaxCredentialSize
 )
@@ -45,6 +46,7 @@ type Sync interface {
     line(connection net.Conn, message *Message) bool
     text(connection net.Conn, message *Message) bool
     image(connection net.Conn, message *Message) bool
+    undo(connection net.Conn) bool
     routeMessage(connection net.Conn, message *Message) bool
     clientDisconnected(connection net.Conn)
 }
@@ -368,6 +370,11 @@ func (impl *SyncImpl) image(connection net.Conn, message *Message) bool {
     return false
 }
 
+func (impl *SyncImpl) undo(connection net.Conn) bool {
+
+    return false
+}
+
 func (impl *SyncImpl) routeMessage(connection net.Conn, message *Message) bool {
     disconnect := false
 
@@ -394,6 +401,8 @@ func (impl *SyncImpl) routeMessage(connection net.Conn, message *Message) bool {
             disconnect = impl.text(connection, message)
         case flagImage:
             disconnect = impl.image(connection, message)
+        case flagUndo:
+            disconnect = impl.undo(connection)
     }
 
     if disconnect {
