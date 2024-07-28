@@ -131,7 +131,7 @@ func (impl *SyncImpl) logIn(connection net.Conn, message *Message) bool {
         body = nil
     } else {
         body = make([]byte, 1)
-        impl.clients.addClient(connection, &Client{user, make([]*Message, 0), -1})
+        impl.clients.addClient(connection, &Client{user, make(map[int64][]*Message), -1})
     }
 
     impl.network.sendMessage(connection, &Message{
@@ -203,7 +203,7 @@ func (impl *SyncImpl) processPendingMessages(connection net.Conn, message *Messa
 
     var bytes []byte
     for impl.clients.clientHasMessages(connection) {
-        bytes = append(bytes, impl.clients.dequeueMessageFromClient(connection).body...)
+        bytes = append(bytes, impl.clients.dequeueMessageFromClient(connection, message.timestamp).body...)
     }
 
     return bytes

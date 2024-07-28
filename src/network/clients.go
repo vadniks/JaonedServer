@@ -14,7 +14,7 @@ type Clients interface {
     removeClient(connection net.Conn) bool
     clientHasMessages(connection net.Conn) bool
     enqueueMessageToClient(connection net.Conn, message *Message)
-    dequeueMessageFromClient(connection net.Conn) *Message // nillable
+    dequeueMessageFromClient(connection net.Conn, timestamp int64) *Message // nillable
     selectBoard(connection net.Conn, board int32)
     getBoard(connection net.Conn) int32 // might be negative
 }
@@ -26,7 +26,7 @@ type ClientsImpl struct {
 
 type Client struct {
     *database.User
-    pendingMessages []*Message
+    pendingMessages map[int64][]*Message
     board int32
 }
 
@@ -72,20 +72,20 @@ func (impl *ClientsImpl) clientHasMessages(connection net.Conn) bool {
 }
 
 func (impl *ClientsImpl) enqueueMessageToClient(connection net.Conn, message *Message) {
-    if impl.clients[connection].pendingMessages == nil {
-        impl.clients[connection].pendingMessages = make([]*Message, 0)
+    if impl.clients[connection].pendingMessages[message.timestamp] == nil {
+        impl.clients[connection].pendingMessages[message.timestamp] = make([]*Message, 0)
     }
 
-    impl.clients[connection].pendingMessages = append(impl.clients[connection].pendingMessages, message)
+    impl.clients[connection].pendingMessages[message.timestamp] = append(impl.clients[connection].pendingMessages[message.timestamp], message)
 }
 
-func (impl *ClientsImpl) dequeueMessageFromClient(connection net.Conn) *Message { // nillable
+func (impl *ClientsImpl) dequeueMessageFromClient(connection net.Conn, timestamp int64) *Message { // nillable
     if impl.clients[connection].pendingMessages == nil { return nil }
 
-    message := impl.clients[connection].pendingMessages[0]
+    message := impl.clients[connection].pendingMessages[timestamp][0]
 
-    impl.clients[connection].pendingMessages = impl.clients[connection].pendingMessages[1:]
-    if len(impl.clients[connection].pendingMessages) == 0 { impl.clients[connection].pendingMessages = nil }
+    impl.clients[connection].pendingMessages[timestamp] = impl.clients[connection].pendingMessages[timestamp][1:]
+    if len(impl.clients[connection].pendingMessages[timestamp]) == 0 { delete(impl.clients[connection].pendingMessages, timestamp) }
 
     return message
 }
