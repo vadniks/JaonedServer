@@ -131,7 +131,7 @@ func (impl *SyncImpl) logIn(connection net.Conn, message *Message) bool {
         body = nil
     } else {
         body = make([]byte, 1)
-        impl.clients.addClient(connection, &Client{user, make([]*Message, 0)})
+        impl.clients.addClient(connection, &Client{user, make([]*Message, 0), -1})
     }
 
     impl.network.sendMessage(connection, &Message{
@@ -378,6 +378,13 @@ func (impl *SyncImpl) undo(connection net.Conn) bool {
 }
 
 func (impl *SyncImpl) selectBoard(connection net.Conn, message *Message) bool {
+    client := impl.clients.getClient(connection)
+    if client == nil { return true }
+
+    var id int32
+    copy(unsafe.Slice((*byte) (unsafe.Pointer(&(id))), 4), unsafe.Slice(&(message.body[0]), 4))
+
+    client.board = id
 
     return false
 }

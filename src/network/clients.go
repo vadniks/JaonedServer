@@ -15,6 +15,8 @@ type Clients interface {
     clientHasMessages(connection net.Conn) bool
     enqueueMessageToClient(connection net.Conn, message *Message)
     dequeueMessageFromClient(connection net.Conn) *Message // nillable
+    selectBoard(connection net.Conn, board int32)
+    getBoard(connection net.Conn) int32 // might be negative
 }
 
 type ClientsImpl struct {
@@ -25,6 +27,7 @@ type ClientsImpl struct {
 type Client struct {
     *database.User
     pendingMessages []*Message
+    board int32
 }
 
 var clientsInitialized = false
@@ -85,4 +88,12 @@ func (impl *ClientsImpl) dequeueMessageFromClient(connection net.Conn) *Message 
     if len(impl.clients[connection].pendingMessages) == 0 { impl.clients[connection].pendingMessages = nil }
 
     return message
+}
+
+func (impl *ClientsImpl) selectBoard(connection net.Conn, board int32) {
+    impl.clients[connection].board = board
+}
+
+func (impl *ClientsImpl) getBoard(connection net.Conn) int32 { // might be negative
+    return impl.clients[connection].board
 }
