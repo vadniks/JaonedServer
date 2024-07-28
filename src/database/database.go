@@ -216,7 +216,9 @@ func (impl *DatabaseImpl) RemoveLastElement(board int32, username []byte) { // T
     copy(unsafe.Slice(&(key[0]), MaxCredentialSize), username)
     copy(unsafe.Slice(&(key[MaxCredentialSize]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(board))), 4))
 
-    impl.elements[key] = impl.elements[key][:(len(impl.elements[key]) - 1)]
+    if len(impl.elements[key]) > 0 {
+        impl.elements[key] = impl.elements[key][:(len(impl.elements[key]) - 1)]
+    }
 }
 
 func (impl *DatabaseImpl) GetElements(board int32, username []byte) []Element { // TODO: stub
