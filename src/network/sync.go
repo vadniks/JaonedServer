@@ -341,6 +341,8 @@ func (impl *SyncImpl) deleteBoard(connection net.Conn, message *Message) bool {
 }
 
 func (impl *SyncImpl) pointsSet(connection net.Conn, message *Message) bool {
+    if impl.clients.getClient(connection) == nil { return true }
+
     bytes := impl.processPendingMessages(connection, message)
     if bytes == nil { return false }
 
@@ -349,6 +351,8 @@ func (impl *SyncImpl) pointsSet(connection net.Conn, message *Message) bool {
 }
 
 func (impl *SyncImpl) line(connection net.Conn, message *Message) bool {
+    if impl.clients.getClient(connection) == nil { return true }
+
     bytes := impl.processPendingMessages(connection, message)
     if bytes == nil { return false }
 
@@ -357,6 +361,8 @@ func (impl *SyncImpl) line(connection net.Conn, message *Message) bool {
 }
 
 func (impl *SyncImpl) text(connection net.Conn, message *Message) bool {
+    if impl.clients.getClient(connection) == nil { return true }
+
     bytes := impl.processPendingMessages(connection, message)
     if bytes == nil { return false }
 
@@ -365,6 +371,8 @@ func (impl *SyncImpl) text(connection net.Conn, message *Message) bool {
 }
 
 func (impl *SyncImpl) image(connection net.Conn, message *Message) bool {
+    if impl.clients.getClient(connection) == nil { return true }
+
     bytes := impl.processPendingMessages(connection, message)
     if bytes == nil { return false }
 
@@ -373,7 +381,7 @@ func (impl *SyncImpl) image(connection net.Conn, message *Message) bool {
 }
 
 func (impl *SyncImpl) undo(connection net.Conn) bool {
-
+    if impl.clients.getClient(connection) == nil { return true }
     return false
 }
 
