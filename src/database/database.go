@@ -58,6 +58,7 @@ type Database interface {
     AddElement(element Element, board int32, username []byte)
     RemoveLastElement(board int32, username []byte)
     GetElements(board int32, username []byte) []Element
+    RemoveAllElements(board int32, username []byte)
 }
 
 type DatabaseImpl struct {
@@ -230,4 +231,12 @@ func (impl *DatabaseImpl) GetElements(board int32, username []byte) []Element { 
     copy(unsafe.Slice(&(key[MaxCredentialSize]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(board))), 4))
 
     return impl.elements[key]
+}
+
+func (impl *DatabaseImpl) RemoveAllElements(board int32, username []byte) { // TODO: stub
+    key := [MaxCredentialSize + 4]byte{}
+    copy(unsafe.Slice(&(key[0]), MaxCredentialSize), username)
+    copy(unsafe.Slice(&(key[MaxCredentialSize]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(board))), 4))
+
+    impl.elements[key] = nil
 }

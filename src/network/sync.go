@@ -26,8 +26,9 @@ const (
     flagText Flag = 10
     flagImage Flag = 11
     flagUndo Flag = 12
-    flagSelectBoard Flag = 13
-    flagGetBoardElements Flag = 14
+    flagClear Flag = 13
+    flagSelectBoard Flag = 14
+    flagGetBoardElements Flag = 15
 
     maxCredentialSize = database.MaxCredentialSize
 )
@@ -49,6 +50,7 @@ type Sync interface {
     text(connection net.Conn, message *Message) bool
     image(connection net.Conn, message *Message) bool
     undo(connection net.Conn) bool
+    clear(connection net.Conn) bool
     selectBoard(connection net.Conn, message *Message) bool
     boardElements(connection net.Conn) bool
     routeMessage(connection net.Conn, message *Message) bool
@@ -394,6 +396,14 @@ func (impl *SyncImpl) undo(connection net.Conn) bool {
     return false
 }
 
+func (impl *SyncImpl) clear(connection net.Conn) bool {
+    client := impl.clients.getClient(connection)
+    if client == nil { return true }
+
+    impl.db.RemoveAllElements(client.board, client.Username)
+    return false
+}
+
 func (impl *SyncImpl) selectBoard(connection net.Conn, message *Message) bool {
     client := impl.clients.getClient(connection)
     if client == nil { return true }
@@ -457,6 +467,8 @@ func (impl *SyncImpl) routeMessage(connection net.Conn, message *Message) bool {
             disconnect = impl.image(connection, message)
         case flagUndo:
             disconnect = impl.undo(connection)
+        case flagClear:
+            disconnect = impl.clear(connection)
         case flagSelectBoard:
             disconnect = impl.selectBoard(connection, message)
         case flagGetBoardElements:
