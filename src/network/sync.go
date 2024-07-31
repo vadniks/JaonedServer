@@ -221,7 +221,7 @@ func (impl *SyncImpl) packBoard(board *database.Board) []byte {
     copy(unsafe.Slice(&(bytes[0]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(board.Id))), 4))
     copy(unsafe.Slice(&(bytes[4]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(board.Color))), 4))
     copy(unsafe.Slice(&(bytes[8]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(size))), 4))
-    copy(unsafe.Slice(&(bytes[12]), 4), board.Title)
+    copy(unsafe.Slice(&(bytes[12]), size), board.Title)
     return bytes
 }
 
