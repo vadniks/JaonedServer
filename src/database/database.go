@@ -12,7 +12,7 @@ const (
     MaxBoardTitleSize = 16
 )
 
-const ( // TODO: test only
+const (
     ElementPointsSet ElementType = 0
     ElementLine ElementType = 1
     ElementText ElementType = 2
@@ -44,10 +44,8 @@ type Database interface {
     FindUser(username []byte) *User // nillable
     AddUser(username []byte, password []byte) bool
     RemoveUser(username []byte) bool
-    GetAllUsers() []*User
-    UserExists(username []byte) bool
 
-    AddBoard(username []byte, board *Board)
+    AddBoard(username []byte, board *Board) bool
     GetBoard(username []byte, id int32) *Board // nillable
     GetBoards(username []byte) []*Board // nillable
     RemoveBoard(username []byte, id int32) bool
@@ -128,35 +126,43 @@ func (impl *DatabaseImpl) Close() {
 }
 
 func (impl *DatabaseImpl) FindUser(username []byte) *User { // nillable
-    //utils.Assert(impl.db.Query("select ") == nil)
-    return nil
+    row := impl.db.QueryRow("select * from users where username = $1", username)
+
+    user := &User{}
+    if row.Scan(&(user.Username), &(user.Password), &(user.IsAdmin)) != nil { return nil }
+
+    return user
 }
 
 func (impl *DatabaseImpl) AddUser(username []byte, password []byte) bool {
-    return false
+    _, err := impl.db.Exec("insert into users(username, password, admin) values($1, $2, $3)", username, password, 0)
+    return err == nil
 }
 
 func (impl *DatabaseImpl) RemoveUser(username []byte) bool {
-    return false
+    _, err := impl.db.Exec("delete from users where username = $1", username)
+    return err == nil
 }
 
-func (impl *DatabaseImpl) GetAllUsers() []*User {
-    return nil
-}
+func (impl *DatabaseImpl) AddBoard(username []byte, board *Board) bool {
+    row := impl.db.QueryRow("insert into boards(color, title) values($1, $2) returning id", board.Color, board.Title)
+    var boardId int32
+    if row.Scan(&boardId) != nil { return false }
 
-func (impl *DatabaseImpl) UserExists(username []byte) bool {
-    return false
-}
-
-func (impl *DatabaseImpl) AddBoard(username []byte, board *Board) {
-
+    _, err := impl.db.Exec("insert into userAndBoard(username, boardId) values($1, $2)", username, boardId)
+    return err == nil
 }
 
 func (impl *DatabaseImpl) GetBoard(username []byte, id int32) *Board { // nillable
+    //row := impl.db.QueryRow("select boards.id, boards.color, boards.title from boards b inner join userAndBoard uab on b.id = uab.boardId where uab.username = $1 and b.id = $2", username, id)
+
+
+
     return nil
 }
 
 func (impl *DatabaseImpl) GetBoards(username []byte) []*Board { // nillable
+    //rows, err := impl.db.Query("select boards.id, boards.color, boards.title from boards b inner join userAndBoard uab on b.id = uab.boardId")
     return nil
 }
 
