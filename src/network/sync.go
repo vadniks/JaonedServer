@@ -34,6 +34,7 @@ const (
 )
 
 type Sync interface {
+    terminate()
     sendBytes(connection net.Conn, bytes []byte, flag Flag)
     logIn(connection net.Conn, message *Message) bool
     register(connection net.Conn, message *Message) bool
@@ -74,6 +75,10 @@ func createSync(network Network) Sync {
         network,
         createClients(),
     }
+}
+
+func (impl *SyncImpl) terminate() {
+    impl.db.Close()
 }
 
 func (impl *SyncImpl) sendBytes(connection net.Conn, bytes []byte, flag Flag) {

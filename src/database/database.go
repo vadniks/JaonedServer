@@ -5,8 +5,6 @@ import (
     "JaonedServer/utils"
     "database/sql"
     _ "github.com/lib/pq"
-    "reflect"
-    "unsafe"
 )
 
 const (
@@ -30,7 +28,6 @@ type User struct {
 type Board struct {
     Id int32
     Color int32
-    // Size int32
     Title []byte
 }
 
@@ -63,9 +60,6 @@ type Database interface {
 
 type DatabaseImpl struct {
     db *sql.DB
-    users []*User // TODO: test only
-    boards map[[MaxCredentialSize]byte][]*Board // TODO: test only
-    elements map[[MaxCredentialSize + 4]byte][]Element // TODO: test only
 }
 
 var initialized = false
@@ -74,75 +68,72 @@ func Init() Database {
     utils.Assert(!initialized)
     initialized = true
 
-    //db, err := sql.Open("postgres", "postgres://server:server@localhost:5432/db") // TODO
-    //utils.Assert(err == nil)
+    db, err := sql.Open("postgres", "postgres://postgres:postgres@localhost:5432/db?sslmode=disable")
+    utils.Assert(err == nil)
 
-    users := make([]*User, 2)
-    users[0] = &User{
-        []byte{'a', 'd', 'm', 'i', 'n', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        []byte{'p', 'a', 's', 's', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        true,
-    }
-    users[1] = &User{
-        []byte{'u', 's', 'e', 'r', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        []byte{'p', 'a', 's', 's', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        false,
-    }
+    utils.Assert(db.Ping() == nil)
 
-    adminBoards := make([]*Board, 2)
-    adminBoards[0] = &Board{
-        0,
-        0x7f101010,
-        []byte{'T', 'e', 's', 't', ' ', '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    }
-    adminBoards[1] = &Board{
-        1,
-        0x7f252525,
-        []byte{'T', 'e', 's', 't', ' ', '2', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    }
+    _, err = db.Exec(`
+        create table if not exists users(
+            username bytea not null,
+            password bytea not null,
+            admin int not null,
+            primary key(username)
+        )
+    `)
+    if err != nil { println(err.Error()) }
+    utils.Assert(err == nil)
 
-    boards := make(map[[16]byte][]*Board)
-    boards[[MaxCredentialSize]byte{'a', 'd', 'm', 'i', 'n', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}] = adminBoards
+    _, err = db.Exec(`
+        create table if not exists boards(
+            id serial not null,
+            color int not null,
+            title bytea,
+            primary key(id)
+        )
+    `)
+    if err != nil { println(err.Error()) }
+    utils.Assert(err == nil)
+
+    _, err = db.Exec(`
+        create table if not exists userAndBoard(
+            username bytea not null,
+            boardId int not null,
+            foreign key(username) references users(username) on delete cascade,
+            foreign key(boardId) references boards(id) on delete cascade,
+            primary key(username, boardId)
+        )
+    `)
+    if err != nil { println(err.Error()) }
+    utils.Assert(err == nil)
+
+    _, err = db.Exec(`
+        create table if not exists elements(
+            id serial not null,
+            type int not null,
+            bytes bytea not null,
+            primary key(id)
+        )
+    `)
+    if err != nil { println(err.Error()) }
+    utils.Assert(err == nil)
 
     return &DatabaseImpl{
-        nil,
-        users,
-        boards,
-        make(map[[MaxCredentialSize + 4]byte][]Element),
+        db,
     }
 }
 
 func (impl *DatabaseImpl) Close() {
-
+    utils.Assert(impl.db.Close() == nil)
 }
 
-func (impl *DatabaseImpl) FindUser(username []byte) *User { // TODO: stub
-    for _, user := range impl.users {
-        if reflect.DeepEqual(username, user.Username) {
-            return user
-        }
-    }
+func (impl *DatabaseImpl) FindUser(username []byte) *User { // nillable
+    //utils.Assert(impl.db.Query("select ") == nil)
     return nil
 }
 
-func (impl *DatabaseImpl) AddUser(username []byte, password []byte) bool { // TODO: stub
-    if impl.UserExists(username) { return false }
-
-    found := false
-
-    for _, user := range impl.users {
-        if reflect.DeepEqual(user.Username, username) { found = true }
-    }
-
-    if found { return false }
-
-    impl.users = append(impl.users, &User{
-        username,
-        password,
-        false,
-    })
-
-    return true
+func (impl *DatabaseImpl) AddUser(username []byte, password []byte) bool {
+    return false
 }
 
 func (impl *DatabaseImpl) RemoveUser(username []byte) bool {
@@ -153,90 +144,38 @@ func (impl *DatabaseImpl) GetAllUsers() []*User {
     return nil
 }
 
-func (impl *DatabaseImpl) UserExists(username []byte) bool { // TODO: stub
-    return impl.FindUser(username) != nil
+func (impl *DatabaseImpl) UserExists(username []byte) bool {
+    return false
 }
 
-func (impl *DatabaseImpl) AddBoard(username []byte, board *Board) { // TODO: stub
-    xUsername := [MaxCredentialSize]byte(username)
-    if impl.boards[xUsername] == nil { impl.boards[xUsername] = make([]*Board, 0) }
+func (impl *DatabaseImpl) AddBoard(username []byte, board *Board) {
 
-    var maxId int32 = 0
-    for _, board := range impl.boards[xUsername] {
-        if maxId < board.Id { maxId = board.Id }
-    }
-
-    board.Id = maxId + 1
-    impl.boards[xUsername] = append(impl.boards[xUsername], board)
 }
 
-func (impl *DatabaseImpl) GetBoard(username []byte, id int32) *Board { // nillable // TODO: stub
-    xUsername := [16]byte(username)
-    if impl.boards[xUsername] != nil {
-        for _, board := range impl.boards[xUsername] {
-            if board.Id == id { return board }
-        }
-        return nil
-    } else {
-        return nil
-    }
+func (impl *DatabaseImpl) GetBoard(username []byte, id int32) *Board { // nillable
+    return nil
 }
 
-func (impl *DatabaseImpl) GetBoards(username []byte) []*Board { // nillable // TODO: stub
-    xUsername := [16]byte(username)
-    return impl.boards[xUsername]
+func (impl *DatabaseImpl) GetBoards(username []byte) []*Board { // nillable
+    return nil
 }
 
-func (impl *DatabaseImpl) RemoveBoard(username []byte, id int32) bool { // TODO: stub
-    xUsername := [16]byte(username)
-    var newBoards []*Board
-
-    if impl.boards[xUsername] == nil { return false }
-
-    for _, board := range impl.boards[xUsername] {
-        if board.Id != id {
-            newBoards = append(newBoards, board)
-        }
-    }
-
-    previousLength := len(impl.boards[xUsername])
-    impl.boards[xUsername] = newBoards
-    return len(newBoards) < previousLength
+func (impl *DatabaseImpl) RemoveBoard(username []byte, id int32) bool {
+    return false
 }
 
-func (impl *DatabaseImpl) AddElement(element Element, board int32, username []byte) { // TODO: stub
-    key := [MaxCredentialSize + 4]byte{}
-    copy(unsafe.Slice(&(key[0]), MaxCredentialSize), username)
-    copy(unsafe.Slice(&(key[MaxCredentialSize]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(board))), 4))
+func (impl *DatabaseImpl) AddElement(element Element, board int32, username []byte) {
 
-    if impl.elements[key] == nil { impl.elements[key] = make([]Element, 0) }
-    impl.elements[key] = append(impl.elements[key], element)
 }
 
-func (impl *DatabaseImpl) RemoveLastElement(board int32, username []byte) { // TODO: stub
-    key := [MaxCredentialSize + 4]byte{}
-    copy(unsafe.Slice(&(key[0]), MaxCredentialSize), username)
-    copy(unsafe.Slice(&(key[MaxCredentialSize]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(board))), 4))
+func (impl *DatabaseImpl) RemoveLastElement(board int32, username []byte) {
 
-    if len(impl.elements[key]) > 0 {
-        impl.elements[key] = impl.elements[key][:(len(impl.elements[key]) - 1)]
-    } else {
-        impl.elements[key] = nil
-    }
 }
 
-func (impl *DatabaseImpl) GetElements(board int32, username []byte) []Element { // TODO: stub
-    key := [MaxCredentialSize + 4]byte{}
-    copy(unsafe.Slice(&(key[0]), MaxCredentialSize), username)
-    copy(unsafe.Slice(&(key[MaxCredentialSize]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(board))), 4))
-
-    return impl.elements[key]
+func (impl *DatabaseImpl) GetElements(board int32, username []byte) []Element {
+    return nil
 }
 
-func (impl *DatabaseImpl) RemoveAllElements(board int32, username []byte) { // TODO: stub
-    key := [MaxCredentialSize + 4]byte{}
-    copy(unsafe.Slice(&(key[0]), MaxCredentialSize), username)
-    copy(unsafe.Slice(&(key[MaxCredentialSize]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(board))), 4))
+func (impl *DatabaseImpl) RemoveAllElements(board int32, username []byte) {
 
-    impl.elements[key] = nil
 }

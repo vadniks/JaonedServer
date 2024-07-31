@@ -76,6 +76,8 @@ func (impl *NetworkImpl) ProcessClients() {
 
     err = listener.Close()
     utils.Assert(err == nil || errors.Is(err, net.ErrClosed))
+
+    impl.sync.terminate()
 }
 
 func (impl *NetworkImpl) updateConnectionIdleTimeout(connection net.Conn) {
