@@ -1,6 +1,6 @@
 
 # Jaoned - an online drawing board (server)
 
-[The client](https://github.com/vadniks/Jaoned)
+See detailed description in the client's repo
 
-`TODO`: add a license (GNU GPLv3)
+[The client](https://github.com/vadniks/Jaoned)
