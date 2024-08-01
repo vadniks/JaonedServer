@@ -119,9 +119,16 @@ func Init() Database {
     if err != nil { println(err.Error()) }
     utils.Assert(err == nil)
 
-    return &DatabaseImpl{
-        db,
+    impl := &DatabaseImpl{db}
+
+    if impl.FindUser([]byte{'a', 'd', 'm', 'i', 'n', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}) == nil {
+        impl.AddUser(
+            []byte{'a', 'd', 'm', 'i', 'n', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            []byte{'p', 'a', 's', 's', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        )
     }
+
+    return impl
 }
 
 func (impl *DatabaseImpl) Close() {
@@ -157,7 +164,7 @@ func (impl *DatabaseImpl) AddBoard(username []byte, board *Board) bool {
 }
 
 func (impl *DatabaseImpl) GetBoard(username []byte, id int32) *Board { // nillable
-    row := impl.db.QueryRow("select boards.id, boards.color, boards.title from boards b inner join userAndBoard uab on b.id = uab.boardId where uab.username = $1 and b.id = $2", username, id)
+    row := impl.db.QueryRow("select b.id, b.color, b.title from boards b inner join userAndBoard uab on b.id = uab.boardId where uab.username = $1 and b.id = $2", username, id)
 
     board := &Board{}
     if row.Scan(&(board.Id), &(board.Color), &(board.Title)) != nil { return nil }
@@ -166,7 +173,7 @@ func (impl *DatabaseImpl) GetBoard(username []byte, id int32) *Board { // nillab
 }
 
 func (impl *DatabaseImpl) GetBoards(username []byte) []*Board { // nillable
-    rows, err := impl.db.Query("select boards.id, boards.color, boards.title from boards b inner join userAndBoard uab on b.id = uab.boardId where uab.username = $1", username)
+    rows, err := impl.db.Query("select b.id, b.color, b.title from boards b inner join userAndBoard uab on b.id = uab.boardId where uab.username = $1", username)
     if err != nil { return nil }
 
     boards := make([]*Board, 0)
@@ -184,7 +191,7 @@ func (impl *DatabaseImpl) RemoveBoard(username []byte, id int32) bool {
     _, err := impl.db.Exec("delete from boards where id = $1", id)
     if err != nil { return false }
 
-    _, err = impl.db.Exec("delete from userAndBoard where username = $1", username)
+    _, err = impl.db.Exec("delete from userAndBoard where username = $1 and boardId = $2", username, id)
     return err == nil
 }
 
