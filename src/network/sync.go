@@ -356,7 +356,7 @@ func (impl *SyncImpl) pointsSet(connection net.Conn, message *Message) bool {
     bytes := impl.processPendingMessages(connection, message)
     if bytes == nil { return false }
 
-    impl.db.AddElement(database.Element{database.ElementPointsSet, bytes}, client.board, client.Username)
+    impl.db.AddElement(database.Element{database.ElementPointsSet, bytes}, client.board)
     return false
 }
 
@@ -367,7 +367,7 @@ func (impl *SyncImpl) line(connection net.Conn, message *Message) bool {
     bytes := impl.processPendingMessages(connection, message)
     if bytes == nil { return false }
 
-    impl.db.AddElement(database.Element{database.ElementLine, bytes}, client.board, client.Username)
+    impl.db.AddElement(database.Element{database.ElementLine, bytes}, client.board)
     return false
 }
 
@@ -378,7 +378,7 @@ func (impl *SyncImpl) text(connection net.Conn, message *Message) bool {
     bytes := impl.processPendingMessages(connection, message)
     if bytes == nil { return false }
 
-    impl.db.AddElement(database.Element{database.ElementText, bytes}, client.board, client.Username)
+    impl.db.AddElement(database.Element{database.ElementText, bytes}, client.board)
     return false
 }
 
@@ -389,7 +389,7 @@ func (impl *SyncImpl) image(connection net.Conn, message *Message) bool {
     bytes := impl.processPendingMessages(connection, message)
     if bytes == nil { return false }
 
-    impl.db.AddElement(database.Element{database.ElementImage, bytes}, client.board, client.Username)
+    impl.db.AddElement(database.Element{database.ElementImage, bytes}, client.board)
     return false
 }
 
@@ -397,7 +397,7 @@ func (impl *SyncImpl) undo(connection net.Conn) bool {
     client := impl.clients.getClient(connection)
     if client == nil { return true }
 
-    impl.db.RemoveLastElement(client.board, client.Username)
+    impl.db.RemoveLastElement(client.board)
     return false
 }
 
@@ -405,7 +405,7 @@ func (impl *SyncImpl) clear(connection net.Conn) bool {
     client := impl.clients.getClient(connection)
     if client == nil { return true }
 
-    impl.db.RemoveAllElements(client.board, client.Username)
+    impl.db.RemoveAllElements(client.board)
     return false
 }
 
@@ -425,7 +425,7 @@ func (impl *SyncImpl) boardElements(connection net.Conn) bool {
     client := impl.clients.getClient(connection)
     if client == nil { return true }
 
-    for _, element := range impl.db.GetElements(client.board, client.Username) {
+    for _, element := range impl.db.GetElements(client.board) {
         bytes := make([]byte, 4 + len(element.Bytes))
         copy(unsafe.Slice(&(bytes[0]), 4), unsafe.Slice((*byte) (unsafe.Pointer(&(element.Type))), 4))
         copy(unsafe.Slice(&(bytes[4]), len(element.Bytes)), element.Bytes)

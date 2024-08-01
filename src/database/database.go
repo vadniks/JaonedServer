@@ -38,7 +38,7 @@ type Element struct {
     Bytes []byte
 }
 
-type Database interface {
+type Database interface { // true - success
     Close()
 
     FindUser(username []byte) *User // nillable
@@ -50,10 +50,10 @@ type Database interface {
     GetBoards(username []byte) []*Board // nillable
     RemoveBoard(username []byte, id int32) bool
 
-    AddElement(element Element, board int32, username []byte)
-    RemoveLastElement(board int32, username []byte)
-    GetElements(board int32, username []byte) []Element
-    RemoveAllElements(board int32, username []byte)
+    AddElement(element Element, board int32) bool
+    RemoveLastElement(board int32) bool
+    GetElements(board int32) []Element
+    RemoveAllElements(board int32) bool
 }
 
 type DatabaseImpl struct {
@@ -110,6 +110,8 @@ func Init() Database {
             id serial not null,
             type int not null,
             bytes bytea not null,
+            boardId int not null,
+            foreign key(boardId) references boards(id) on delete cascade,
             primary key(id)
         )
     `)
@@ -154,34 +156,50 @@ func (impl *DatabaseImpl) AddBoard(username []byte, board *Board) bool {
 }
 
 func (impl *DatabaseImpl) GetBoard(username []byte, id int32) *Board { // nillable
-    //row := impl.db.QueryRow("select boards.id, boards.color, boards.title from boards b inner join userAndBoard uab on b.id = uab.boardId where uab.username = $1 and b.id = $2", username, id)
+    row := impl.db.QueryRow("select boards.id, boards.color, boards.title from boards b inner join userAndBoard uab on b.id = uab.boardId where uab.username = $1 and b.id = $2", username, id)
 
+    board := &Board{}
+    if row.Scan(&(board.Id), &(board.Color), &(board.Title)) != nil { return nil }
 
-
-    return nil
+    return board
 }
 
 func (impl *DatabaseImpl) GetBoards(username []byte) []*Board { // nillable
-    //rows, err := impl.db.Query("select boards.id, boards.color, boards.title from boards b inner join userAndBoard uab on b.id = uab.boardId")
-    return nil
+    rows, err := impl.db.Query("select boards.id, boards.color, boards.title from boards b inner join userAndBoard uab on b.id = uab.boardId where uab.username = $1", username)
+    if err != nil { return nil }
+
+    boards := make([]*Board, 0)
+
+    for rows.Next() {
+        board := &Board{}
+        if rows.Scan(&(board.Id), &(board.Color), &(board.Title)) != nil { return nil }
+        boards = append(boards, board)
+    }
+
+    return boards
 }
 
 func (impl *DatabaseImpl) RemoveBoard(username []byte, id int32) bool {
+    _, err := impl.db.Exec("delete from boards where id = $1", id)
+    if err != nil { return false }
+
+    _, err = impl.db.Exec("delete from userAndBoard where username = $1", username)
+    return err == nil
+}
+
+func (impl *DatabaseImpl) AddElement(element Element, board int32) bool {
+    _, err := impl.db.Exec("insert into elements(type, bytes, boardId) values($1, $2, $3)", element.Type, element.Bytes, board)
+    return err == nil
+}
+
+func (impl *DatabaseImpl) RemoveLastElement(board int32) bool {
     return false
 }
 
-func (impl *DatabaseImpl) AddElement(element Element, board int32, username []byte) {
-
-}
-
-func (impl *DatabaseImpl) RemoveLastElement(board int32, username []byte) {
-
-}
-
-func (impl *DatabaseImpl) GetElements(board int32, username []byte) []Element {
+func (impl *DatabaseImpl) GetElements(board int32) []Element {
     return nil
 }
 
-func (impl *DatabaseImpl) RemoveAllElements(board int32, username []byte) {
-
+func (impl *DatabaseImpl) RemoveAllElements(board int32) bool {
+    return false
 }
