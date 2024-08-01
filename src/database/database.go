@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	MaxCredentialSize = 16
+    MaxCredentialSize = 16
     MaxBoardTitleSize = 16
 )
 
@@ -52,7 +52,7 @@ type Database interface { // true - success
 
     AddElement(element Element, board int32) bool
     RemoveLastElement(board int32) bool
-    GetElements(board int32) []Element
+    GetElements(board int32) []*Element // nillable
     RemoveAllElements(board int32) bool
 }
 
@@ -111,6 +111,7 @@ func Init() Database {
             type int not null,
             bytes bytea not null,
             boardId int not null,
+            timestamp bigint not null,
             foreign key(boardId) references boards(id) on delete cascade,
             primary key(id)
         )
@@ -188,18 +189,31 @@ func (impl *DatabaseImpl) RemoveBoard(username []byte, id int32) bool {
 }
 
 func (impl *DatabaseImpl) AddElement(element Element, board int32) bool {
-    _, err := impl.db.Exec("insert into elements(type, bytes, boardId) values($1, $2, $3)", element.Type, element.Bytes, board)
+    _, err := impl.db.Exec("insert into elements(type, bytes, boardId, timestamp) values($1, $2, $3, $4)", element.Type, element.Bytes, board, utils.CurrentTimeMillis())
     return err == nil
 }
 
 func (impl *DatabaseImpl) RemoveLastElement(board int32) bool {
-    return false
+    _, err := impl.db.Exec("delete from elements where timestamp = (select max(timestamp) from elements)")
+    return err == nil
 }
 
-func (impl *DatabaseImpl) GetElements(board int32) []Element {
-    return nil
+func (impl *DatabaseImpl) GetElements(board int32) []*Element { // nillable
+    rows, err := impl.db.Query("select type, bytes from elements where boardId = $1", board)
+    if err != nil { return nil }
+
+    elements := make([]*Element, 0)
+
+    for rows.Next() {
+        element := &Element{}
+        if rows.Scan(&(element.Type), &(element.Bytes)) != nil { return nil }
+        elements = append(elements, element)
+    }
+
+    return elements
 }
 
 func (impl *DatabaseImpl) RemoveAllElements(board int32) bool {
-    return false
+    _, err := impl.db.Exec("delete from elements where boardId = $1", board)
+    return err == nil
 }
